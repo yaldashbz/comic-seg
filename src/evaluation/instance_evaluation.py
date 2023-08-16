@@ -54,6 +54,7 @@ class ComicInstanceEvaluator(DatasetEvaluator):
                 target_mask = coco_segmentation_to_mask(gt_mask, height, width)
             except ValueError:
                 print(f"Problem in annotations image_id = {image_id} in class {comic_pred_category}!")
+                continue
             
             if cropped_box is not None:
                 target_mask = np.array(Image.fromarray(target_mask).crop(cropped_box))
@@ -62,8 +63,9 @@ class ComicInstanceEvaluator(DatasetEvaluator):
             union = np.logical_or(pred_mask, target_mask).sum()
 
             self.confusion_matrix[pred_class, category_id] += intersection
-            self.confusion_matrix[pred_class, :] += union
-            self.confusion_matrix[:, category_id] += union
+            self.confusion_matrix[pred_class, :] += np.sum(pred_mask, dtype=np.int64)
+            self.confusion_matrix[:, category_id] += np.sum(target_mask, dtype=np.int64)
+            self.confusion_matrix[category_id, category_id] += union - intersection
     
     def _compute_iou(self):
         diagonal = np.diag(self.confusion_matrix)

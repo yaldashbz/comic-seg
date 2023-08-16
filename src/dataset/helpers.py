@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from detectron2.utils.visualizer import Visualizer, ColorMode
 
+from .utils import *
+
 
 def visualize_sample_anns(sample, category_id=None):
     image = Image.open(sample["file_name"])
@@ -15,6 +17,8 @@ def visualize_sample_anns(sample, category_id=None):
         annotations = filter(lambda x: x['category_id'] == category_id, annotations)
     for annotation in annotations:
         segment = annotation["segmentation"]
+        if isinstance(segment, dict):
+            segment = convert_rle_mask_to_list(segment)
         polygons = [segment[0]]
         for polygon in polygons:
             polygon = [(x, y) for x, y in zip(polygon[0::2], polygon[1::2])]
@@ -73,3 +77,12 @@ def get_panels(sample):
             panels.append(cropped_image)
             cropped_boxes.append((x, y, x + w, y + h))
     return panels, cropped_boxes
+
+
+def convert_rle_mask_to_list(rle_mask):
+    mask_size = rle_mask['size']
+    mask_counts = rle_mask['counts']
+    binary_mask = mask_util.decode({'size': mask_size, 'counts': mask_counts})
+    # Convert the binary mask to a list of [x, y] coordinates
+    coords = np.argwhere(binary_mask).flatten()
+    return [coords.tolist()]

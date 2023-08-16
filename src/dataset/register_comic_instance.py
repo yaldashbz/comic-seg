@@ -1,9 +1,11 @@
 import os
+
+from tqdm import tqdm
 from copy import deepcopy
 from detectron2.data.datasets.coco import register_coco_instances
 from detectron2.data import MetadataCatalog
 
-from .utils import open_json, save_json
+from .utils import *
 
 
 DATASET_NAME = 'sinergia_comic_instances'
@@ -50,14 +52,18 @@ def _update_categories(label_colors_file, categories, fill_isthing=False):
     return categories
 
 
-def _fill_segmentations_with_bbox(annotations):
+def _fix_segmentations(annotations):
     """
     Fill segmentations which don't have segmentation key (using bbox)
+    Fix segmentations which are in dict format {'size': ..., 'counts': ...}
     """
-    for ann in annotations:
+    for ann in tqdm(annotations):
         if 'segmentation' not in ann or len(ann['segmentation']) == 0:
             x, y, w, h = ann['bbox']
             ann['segmentation'] = [[x, y, x+w, y, x+w, y+h, x, y+h]]
+
+        # if isinstance(ann['segmentation'], dict):
+        #     ann['segmentation'] = convert_list_counts_to_seg_list(ann['segmentation'])
 
 
 def _get_comic_meta(categories):
@@ -83,7 +89,7 @@ def get_group_instances(instances, group):
             images.append(image)
     
     annotations = []
-    for ann in instances['annotations']:
+    for ann in tqdm(instances['annotations']):
         if ann['image_id'] not in removed_ids:
             annotations.append(ann)
     
@@ -111,12 +117,14 @@ def register_comic_instances():
         sinergia_instances = open_json(SINERGIA_INSTANCES_FILE)
         
         _update_categories(LABEL_COLOR_FILE, sinergia_instances['categories'])
-        _fill_segmentations_with_bbox(sinergia_instances['annotations'])
+        _fix_segmentations(sinergia_instances['annotations'])
         
         # save modified dataset
         save_json(SINERGIA_INSTANCES_MODIFIED_FILE, sinergia_instances)
     else:
+        print("loading sinergia json ...")
         sinergia_instances = open_json(SINERGIA_INSTANCES_MODIFIED_FILE)
+        print("Sinergia Json loaded.")
 
     register_coco_instances(
         DATASET_NAME,
@@ -149,14 +157,17 @@ def register_yves_instances():
 
 
 if DATASET_NAME not in MetadataCatalog.list():
+    print("registering comic ...")
     register_comic_instances()
 
 
 if PLACID_NAME not in MetadataCatalog.list():
+    print("registering placid ...")
     register_placid_instances()
 
 
 if YVES_NAME not in MetadataCatalog.list():
+    print("registering yves ...")
     register_yves_instances()
 
 

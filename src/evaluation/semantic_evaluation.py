@@ -1,5 +1,6 @@
 import numpy as np
 
+from tqdm import tqdm
 from PIL import Image
 from detectron2.data import MetadataCatalog
 from detectron2.evaluation import DatasetEvaluator
@@ -18,39 +19,40 @@ class ComicSemanticEvaluator(DatasetEvaluator):
 
     def process(self, inputs, outputs, **kwargs):
         for input_, output in zip(inputs, outputs):
-            pred_masks = output["instances"].pred_masks.cpu().numpy()
+            pred_mask = output["sem_seg"].argmax(dim=0).cpu().numpy()
             annotations = input_["annotations"]
             height = input_["height"]
             width = input_["width"]
             image_id = input_["image_id"]
 
-            for pred_mask in pred_masks:
-                self._update_confusion_matrix(
-                    pred_mask, annotations, height, width, image_id, **kwargs
-                )
+            self._update_confusion_matrix(
+                pred_mask, annotations, height, width, image_id, **kwargs
+            )
 
     def _update_confusion_matrix(
-        self, pred_mask, pred_class, annotations, height, width, image_id, **kwargs
+        self, pred_mask, annotations, height, width, image_id, **kwargs
     ):
         cropped_box = kwargs.get("cropped_box", None)
 
-        for annotation in annotations:
+        for annotation in tqdm(annotations):
             category_id = annotation["category_id"]
             gt_mask = annotation["segmentation"]
             try:
                 target_mask = coco_segmentation_to_mask(gt_mask, height, width)
             except ValueError:
                 print(f"Problem in annotations image_id = {image_id} in class {category_id}!")
-            
+                continue
+
             if cropped_box is not None:
                 target_mask = np.array(Image.fromarray(target_mask).crop(cropped_box))
 
             intersection = np.logical_and(pred_mask, target_mask).sum()
             union = np.logical_or(pred_mask, target_mask).sum()
 
-            self.confusion_matrix[pred_class, category_id] += intersection
-            self.confusion_matrix[pred_class, :] += union
-            self.confusion_matrix[:, category_id] += union
+            self.confusion_matrix[category_id, category_id] += intersection
+            self.confusion_matrix[category_id, :] += np.sum(pred_mask == category_id, axis=(0, 1))
+            self.confusion_matrix[:, category_id] += np.sum(target_mask == category_id, axis=(0, 1))
+            self.confusion_matrix[category_id, category_id] += union - intersection
     
     def _compute_iou(self):
         diagonal = np.diag(self.confusion_matrix)
