@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
 from detectron2.utils.visualizer import Visualizer, ColorMode
+from detectron2.structures.boxes import BoxMode
 
 from .utils import *
 
@@ -66,16 +67,26 @@ def extract_panel(image, segmentation):
     return panel
 
 
-def get_panels(sample):
+def get_panels(sample, read_from_img_file=False):
     panels = []
     cropped_boxes = []
+    if 'image' in sample and not read_from_img_file:
+        image = sample['image'].cpu().numpy().transpose((1, 2, 0))
+        pil_im = Image.fromarray(np.uint8(image))
+    else:
+        pil_im = Image.open(sample['file_name'])
+    
     for ann in sample['annotations']:
         if ann['category_id'] == 24: # panel
-            pil_im = Image.open(sample['file_name'])
-            x, y, w, h = ann['bbox']
-            cropped_image = np.array(pil_im.crop((x, y, x + w, y + h)))
+            bbox_mode = ann['bbox_mode']
+            if bbox_mode == BoxMode.XYXY_ABS:
+                cropped_box = ann['bbox']
+            if bbox_mode == BoxMode.XYWH_ABS:
+                x, y, w, h = ann['bbox']
+                cropped_box = (x, y, x + w, y + h)
+            cropped_image = np.array(pil_im.crop(cropped_box))
             panels.append(cropped_image)
-            cropped_boxes.append((x, y, x + w, y + h))
+            cropped_boxes.append(cropped_box)
     return panels, cropped_boxes
 
 
