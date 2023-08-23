@@ -11,7 +11,7 @@ __pycache__/
 
 # Unrequired Folders
 cityscapesScripts/
-# Mask2Former/
+Mask2Former_old/
 panopticapi/
 
 # Unrequired Files
