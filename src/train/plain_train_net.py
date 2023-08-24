@@ -39,7 +39,7 @@ def do_test(cfg, model):
 
 def do_train(cfg, model, resume=True):
     model.train()
-    freeze_mask2former(model)
+    freeze_mask2former(model.module)
     optimizer = ComicTrainer.build_optimizer(cfg, model)
     scheduler = ComicTrainer.build_lr_scheduler(cfg, optimizer)
 
