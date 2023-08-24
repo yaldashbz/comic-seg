@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
@@ -97,3 +98,12 @@ def convert_rle_mask_to_list(rle_mask):
     # Convert the binary mask to a list of [x, y] coordinates
     coords = np.argwhere(binary_mask).flatten()
     return [coords.tolist()]
+
+
+def compute_pixel_mean_std(dataset_dicts):
+    pixel_values = []
+    for dataset_dict in tqdm(dataset_dicts):
+        image = cv2.imread(dataset_dict['file_name'])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        pixel_values.extend(image.reshape(-1, 3))
+    return np.mean(pixel_values, axis=0), np.std(pixel_values, axis=0)

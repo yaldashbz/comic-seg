@@ -1,0 +1,3 @@
+Run pyscripts files from main path (home of src), for example:
+
+> python pyscripts/mask2former_finetune.py ...

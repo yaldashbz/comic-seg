@@ -20,6 +20,11 @@ YVES_INSTANCES_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotations", "instan
 LABEL_COLOR_FILE = os.path.join(SINERGIA_ROOT, 'label_colors.txt')
 COMIC_STUFF_CATEGORIES = ['Horizon', 'Background', 'Comic Bubble'] # TODO for later (ask)
 
+NAME_MAPPER = {
+    'placid': PLACID_NAME,
+    'yves': YVES_NAME,
+    'comic': DATASET_NAME
+}
 
 def extract_categories(label_colors_file, categories):
     category2color = {}
