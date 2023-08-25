@@ -29,7 +29,7 @@ def comic_mapper_panel_wise(dataset_dict):
         box = BoxMode.convert(cropped_box, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
         box = list(map(int, cropped_box))
         image, transforms = T.apply_transform_gens(
-            [*transform_list, T.CropTransform(*box)], 
+            [T.CropTransform(*box), *transform_list], 
             image
         )
         annos = [
