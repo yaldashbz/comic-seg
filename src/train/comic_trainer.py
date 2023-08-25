@@ -2,6 +2,7 @@ import copy
 import itertools
 import logging
 import torch
+from tqdm import tqdm
 from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
@@ -20,8 +21,9 @@ from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
 from src.evaluation import ComicInstanceEvaluator, ComicSemanticEvaluator
-from src.dataset.dataset_mapper import comic_mapper
-
+from src.dataset.dataset_mapper import comic_mapper_page_wise, comic_mapper_panel_wise
+from src.dataset.helpers import EvalType
+from src.dataset.register_train_test import register_cropped
 
 class ComicTrainer(DefaultTrainer):
     """
@@ -29,7 +31,7 @@ class ComicTrainer(DefaultTrainer):
     """
 
     @classmethod
-    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None, cropped_boxes=None):
         """
         Create evaluator(s) for a given dataset.
         This uses the special metadata "evaluator_type" associated with each
@@ -41,20 +43,33 @@ class ComicTrainer(DefaultTrainer):
             output_folder = cfg.OUTPUT_DIR
         evaluator_list = []
         evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
-        # semantic segmentation
-        if evaluator_type == 'comic_instance':
+
+        if evaluator_type in [EvalType.COMIC_INSTANCE, EvalType.COMIC_INSTANCE_PANEL]:
             evaluator_list.append(ComicInstanceEvaluator(dataset_name))
-        # instance segmentation
-        if evaluator_type == 'comic_sem_seg':
+
+        if evaluator_type in [EvalType.COMIC_SEM_SEG, EvalType.COMIC_SEM_SEG_PANEL]:
             evaluator_list.append(ComicSemanticEvaluator(dataset_name))
-        
+
         elif len(evaluator_list) == 1:
             return evaluator_list[0]
+
         return DatasetEvaluators(evaluator_list)
 
     @classmethod
-    def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg, mapper=comic_mapper)
+    def build_train_loader(cls, cfg, cropped=True):
+        if not cropped:
+            return build_detection_train_loader(cfg, mapper=comic_mapper_page_wise)
+        else:
+            dataset_name = cfg.DATASETS.TRAIN[0]
+            dataset_dicts = DatasetCatalog.get(dataset_name)
+            print(dataset_name, len(dataset_dicts))
+            cropped_dataset_dicts = []
+            for dataset_dict in tqdm(dataset_dicts):
+                cropped_dataset_dicts.extend(comic_mapper_panel_wise(dataset_dict))
+            
+            new_cropped_name = register_cropped(dataset_name, 'train', cropped_dataset_dicts)
+            cfg.DATASETS.TRAIN = (new_cropped_name, )
+            return build_detection_train_loader(cfg, mapper=lambda x: x)          
 
     @classmethod
     def build_lr_scheduler(cls, cfg, optimizer):

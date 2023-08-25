@@ -1,13 +1,23 @@
+import os
 import cv2
 import numpy as np
+from enum import Enum
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from PIL import Image, ImageDraw
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.structures.boxes import BoxMode
+import pycocotools.mask as mask_utils
 
 from .utils import *
+
+
+class EvalType(Enum):
+    COMIC_INSTANCE = 'comic_instance'
+    COMIC_INSTANCE_PANEL = 'comic_instance_panel'
+    COMIC_SEM_SEG = 'comic_sem_seg'
+    COMIC_SEM_SEG_PANEL = 'comic_sem_seg_panel'
 
 
 def visualize_sample_anns(sample, category_id=None):
@@ -69,6 +79,9 @@ def extract_panel(image, segmentation):
 
 
 def get_panels(sample, read_from_img_file=False):
+    """
+    Return panels and cropped_boxes, in XYXY format
+    """
     panels = []
     cropped_boxes = []
     if 'image' in sample and not read_from_img_file:
@@ -91,10 +104,113 @@ def get_panels(sample, read_from_img_file=False):
     return panels, cropped_boxes
 
 
+def get_all_panels_dataset_dicts(dataset_dicts, save=False):
+    new_dataset_dicts = []
+    for sample in tqdm(dataset_dicts):
+        panels, cropped_boxes = get_panels(sample)
+        
+        assert len(panels) == len(cropped_boxes)
+        
+        page_file_name = sample['file_name']
+        image_id = sample['image_id']
+        for i, (panel, cropped_box) in enumerate(zip(panels, cropped_boxes)):
+
+            panel_file_name = f'{page_file_name.split(".png")[0]}_panel_{i}.png'
+            if save and not os.path.exists(panel_file_name):
+                cv2.imwrite(panel_file_name, panel)
+            
+            new_sample = {
+                'file_name': panel_file_name if save else page_file_name,
+                'height': panel.shape[1],
+                'width': panel.shape[0],
+                'image_id': int(f'{image_id}{i}'),
+                'annotations': sample['annotations'],
+                'panel': panel,
+                'cropped_box': cropped_box,
+                'cropped_box_mode': BoxMode.XYXY_ABS
+            }
+
+            new_dataset_dicts.append(new_sample)
+
+    return new_dataset_dicts    
+
+
+def decode_rle_segmentation(rle_segmentation, cropped_box):
+    cropped_mask = mask_utils.decode(rle_segmentation)
+    cropped_box = list(map(int, cropped_box))
+    cropped_mask = cropped_mask[
+        cropped_box[1]:cropped_box[1] + cropped_box[3], 
+        cropped_box[0]:cropped_box[0] + cropped_box[2]
+    ]
+    cropped_rle_segmentation = mask_utils.encode(np.asfortranarray(cropped_mask.astype(np.uint8)))
+
+    return cropped_rle_segmentation
+
+
+def crop_annotations(annotations, cropped_box):
+    # Don't use for now.
+    cropped_annotations = []
+    cropped_x_min, cropped_y_min, cropped_x_max, cropped_y_max = cropped_box
+
+    for annotation in annotations:
+        bbox = annotation['bbox']
+        if annotation['bbox_mode'] == BoxMode.XYWH_ABS:
+            bbox = [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
+        segmentation = annotation['segmentation']
+
+        # Calculate the intersection between the bbox and cropped_box
+        x_min = max(bbox[0], cropped_x_min)
+        y_min = max(bbox[1], cropped_y_min)
+        x_max = min(bbox[2], cropped_x_max)
+        y_max = min(bbox[3], cropped_y_max)
+
+        # Check if there is an intersection
+        if x_min < x_max and y_min < y_max:
+            # Calculate the new cropped bbox coordinates
+            cropped_bbox = [
+                x_min - cropped_x_min,
+                y_min - cropped_y_min,
+                x_max - x_min,
+                y_max - y_min
+            ]
+
+            # Calculate the new cropped segmentation coordinates
+            cropped_segmentation = []
+            if isinstance(segmentation, dict) and 'size' in segmentation and 'counts' in segmentation:
+                cropped_rle_segmentation = decode_rle_segmentation(segmentation, cropped_bbox)
+                if cropped_rle_segmentation is not None:
+                    cropped_segmentation.append(cropped_rle_segmentation)
+            else:
+                for segment in segmentation:
+                    cropped_segment = [
+                        [point[0] - cropped_x_min, point[1] - cropped_y_min]
+                        for point in zip(segment[::2], segment[1::2])
+                        if (
+                            cropped_x_min <= point[0] <= cropped_x_max + 100
+                            and cropped_y_min <= point[1] <= cropped_y_max + 100
+                        )
+                    ]
+                    if cropped_segment:
+                        cropped_segmentation.append(cropped_segment)
+
+            # Create a new annotation with the cropped bbox and segmentation
+            cropped_annotation = {
+                'iscrowd': annotation['iscrowd'],
+                'bbox': cropped_bbox,
+                'category_id': annotation['category_id'],
+                'segmentation': cropped_segmentation,
+                'bbox_mode': BoxMode.XYWH_ABS
+            }
+
+            cropped_annotations.append(cropped_annotation)
+
+    return cropped_annotations
+
+
 def convert_rle_mask_to_list(rle_mask):
     mask_size = rle_mask['size']
     mask_counts = rle_mask['counts']
-    binary_mask = mask_util.decode({'size': mask_size, 'counts': mask_counts})
+    binary_mask = mask_utils.decode({'size': mask_size, 'counts': mask_counts})
     # Convert the binary mask to a list of [x, y] coordinates
     coords = np.argwhere(binary_mask).flatten()
     return [coords.tolist()]

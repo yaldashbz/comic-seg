@@ -1,4 +1,6 @@
-def freeze_mask2former(model):
+def freeze_mask2former(model, distributed=False):
+    if distributed:
+        model = model.module
     for param in model.parameters():
         param.requires_grad = False
     

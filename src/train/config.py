@@ -4,15 +4,7 @@ from mask2former import add_maskformer2_config
 
 from src.dataset.register_train_test import *
 
-def setup(args):
-    # register train test
-    print('registering train test dataset ...')
-    new_train_name, new_test_name = register_train_test(
-        args.dataset_name, 
-        args.test_size, 
-        args.random_state
-    )
-    
+def setup(dataset_train_name, dataset_test_name):
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
@@ -21,10 +13,10 @@ def setup(args):
 
     cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON = True
     cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON = True
-    cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = True
+    cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = False
 
-    cfg.DATASETS.TRAIN = (new_train_name, )
-    cfg.DATASETS.TEST = (new_test_name, )
+    cfg.DATASETS.TRAIN = (dataset_train_name, )
+    cfg.DATASETS.TEST = (dataset_test_name, )
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.SOLVER.IMS_PER_BATCH = 8
     cfg.SOLVER.BASE_LR = 0.00025

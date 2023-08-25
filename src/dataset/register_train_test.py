@@ -1,8 +1,9 @@
+from typing import List, Tuple
 from sklearn.model_selection import train_test_split
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
+from src.dataset.helpers import EvalType, get_all_panels_dataset_dicts
 
-COMIC_EVAL_TYPE_SEM_SEG = 'comic_sem_seg'
 
 def _register_subset_dataset(dataset, new_name, eval_type, metadata):
     DatasetCatalog.register(new_name, lambda: dataset)
@@ -13,7 +14,8 @@ def _register_subset_dataset(dataset, new_name, eval_type, metadata):
     new_metadata.thing_classes = metadata.thing_classes
 
 
-def register_train_test(dataset_name, test_size=0.2, random_state=42):
+def register_train_test(dataset_name, test_size=0.2, random_state=42) -> Tuple[str, str]:
+    print('registering train test dataset ...')
     dataset_dicts = DatasetCatalog.get(dataset_name)
     metadata = MetadataCatalog.get(dataset_name)
     train_dataset, test_dataset = train_test_split(
@@ -24,11 +26,21 @@ def register_train_test(dataset_name, test_size=0.2, random_state=42):
     
     new_train_name = f'{dataset_name}_train'
     _register_subset_dataset(
-        train_dataset, new_train_name, COMIC_EVAL_TYPE_SEM_SEG, metadata
+        train_dataset, new_train_name, EvalType.COMIC_SEM_SEG, metadata
     )
 
     new_test_name = f'{dataset_name}_test'
     _register_subset_dataset(
-        test_dataset, new_test_name, COMIC_EVAL_TYPE_SEM_SEG, metadata
+        test_dataset, new_test_name, EvalType.COMIC_SEM_SEG, metadata
     )
     return new_train_name, new_test_name
+
+
+def register_cropped(dataset_name: str, mode: str, new_cropped_dicts) -> Tuple[str, List]:
+    metadata = MetadataCatalog.get(dataset_name)
+    print(f"Collect all panels for mode {mode} ...")
+    new_cropped_name = f'{dataset_name}_cropped'
+    _register_subset_dataset(
+        new_cropped_dicts, new_cropped_name, EvalType.COMIC_SEM_SEG_PANEL, metadata
+    )
+    return new_cropped_name

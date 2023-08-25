@@ -11,7 +11,7 @@ from detectron2.engine import default_argument_parser, default_setup, default_wr
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
-from src.train.train_net import ComicTrainer
+from src.train.comic_trainer import ComicTrainer
 from src.train.config import setup
 from src.train.utils import freeze_mask2former
 
@@ -37,9 +37,9 @@ def do_test(cfg, model):
 
 
 
-def do_train(cfg, model, resume=True):
+def do_train(cfg, model, resume=True, cropped=True, distributed=True):
     model.train()
-    freeze_mask2former(model.module)
+    freeze_mask2former(model, distributed)
     optimizer = ComicTrainer.build_optimizer(cfg, model)
     scheduler = ComicTrainer.build_lr_scheduler(cfg, optimizer)
 
@@ -56,7 +56,7 @@ def do_train(cfg, model, resume=True):
     )
 
     writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
-    data_loader = ComicTrainer.build_train_loader(cfg)
+    data_loader = ComicTrainer.build_train_loader(cfg, cropped)
     logger.info("Starting training from iteration {}".format(start_iter))
     with EventStorage(start_iter) as storage:
         for data, iteration in tqdm(zip(data_loader, range(start_iter, max_iter))):
@@ -94,4 +94,3 @@ def do_train(cfg, model, resume=True):
                 for writer in writers:
                     writer.write()
             periodic_checkpointer.step(iteration)
-
