@@ -30,9 +30,8 @@ def visualize_sample_anns(sample, category_id=None):
     for annotation in annotations:
         segment = annotation["segmentation"]
         if isinstance(segment, dict):
-            segment = convert_rle_mask_to_list(segment)
-        polygons = [segment[0]]
-        for polygon in polygons:
+            segment = convert_rle_mask_to_coords(segment)
+        for polygon in segment:
             polygon = [(x, y) for x, y in zip(polygon[0::2], polygon[1::2])]
             polygon = [tuple(map(int, point)) for point in polygon]
             draw = ImageDraw.Draw(image)
@@ -78,18 +77,13 @@ def extract_panel(image, segmentation):
     return panel
 
 
-def get_panels(sample, read_from_img_file=False):
+def get_panels(sample):
     """
     Return panels and cropped_boxes, in XYXY format
     """
     panels = []
     cropped_boxes = []
-    if 'image' in sample and not read_from_img_file:
-        image = sample['image'].cpu().numpy().transpose((1, 2, 0))
-        pil_im = Image.fromarray(np.uint8(image))
-    else:
-        pil_im = Image.open(sample['file_name'])
-    
+    pil_im = Image.open(sample['file_name'])
     for ann in sample['annotations']:
         if ann['category_id'] == 24: # panel
             bbox_mode = ann['bbox_mode']
@@ -207,13 +201,16 @@ def crop_annotations(annotations, cropped_box):
     return cropped_annotations
 
 
-def convert_rle_mask_to_list(rle_mask):
-    mask_size = rle_mask['size']
-    mask_counts = rle_mask['counts']
-    binary_mask = mask_utils.decode({'size': mask_size, 'counts': mask_counts})
+def mask_to_contours(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_list = [contour.flatten().tolist() for contour in contours]
+    return contours_list
+
+
+def convert_rle_mask_to_coords(rle_mask):
+    binary_mask = mask_utils.decode(rle_mask)
     # Convert the binary mask to a list of [x, y] coordinates
-    coords = np.argwhere(binary_mask).flatten()
-    return [coords.tolist()]
+    return mask_to_contours(binary_mask)
 
 
 def compute_pixel_mean_std(dataset_dicts):

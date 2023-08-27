@@ -26,10 +26,11 @@ def comic_mapper_panel_wise(dataset_dict):
     new_dataset_dicts = []
     for i, (_, cropped_box) in enumerate(zip(panels, cropped_boxes)):
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
-        box = BoxMode.convert(cropped_box, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
-        box = list(map(int, cropped_box))
+        # box = BoxMode.convert(cropped_box, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
+        x, y, x1, y1 = cropped_box
+        box = list(map(int, [x, y, x1 - x, y1 - y]))
         image, transforms = T.apply_transform_gens(
-            [T.CropTransform(*box), *transform_list], 
+            [T.CropTransform(*[*box, image.shape[1], image.shape[0]])], 
             image
         )
         annos = [
@@ -42,8 +43,8 @@ def comic_mapper_panel_wise(dataset_dict):
         new_sample = {
             'file_name': dataset_dict["file_name"],
             'image': torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1))),
-            'height': image.shape[1],
-            'width': image.shape[0],
+            'height': image.shape[0],
+            'width': image.shape[1],
             'image_id': int(f'{image_id}{i}'),
             'annotations': annos,
             'instances': instances
