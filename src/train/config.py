@@ -27,7 +27,8 @@ def _base_setup():
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 32
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 28
     cfg.SOLVER.OPTIMIZER = 'SGD'
-    cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
+    # cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
+    cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
 
     cfg.MODEL.PIXEL_MEAN = [184.70014834, 158.68679797, 118.3750071]
     cfg.MODEL.PIXEL_STD = [45.54069698, 40.70228227, 40.9410987]
