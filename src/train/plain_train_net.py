@@ -1,4 +1,5 @@
 import os
+import wandb
 import logging
 import torch
 from tqdm import tqdm
@@ -72,6 +73,7 @@ def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
                 storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
                 
             print(f'Loss {losses_reduced}')
+            wandb.log({"loss": losses_reduced})
 
             optimizer.zero_grad()
             losses.backward()

@@ -17,8 +17,16 @@ def cli():
 
 
 def main(args):
+    import wandb
     from src.train import setup, ComicTrainer, do_train, do_test
 
+    wandb.init(
+        project="comic-seg",
+        config={
+            "panel_wise": args.panel,
+            "dataset": args.data_mode,
+        }
+    )
     cfg = setup(args.data_mode, args.panel, args.test_size, args.random_state)
     print("Command Line Args:", args)
     model = ComicTrainer.build_model(cfg) 

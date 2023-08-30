@@ -12,6 +12,7 @@ __pycache__/
 # Unrequired Folders
 cityscapesScripts/
 panopticapi/
+wandb/
 
 # Unrequired Files
 redundants.ipynb
