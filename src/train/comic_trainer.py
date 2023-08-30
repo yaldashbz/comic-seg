@@ -21,9 +21,9 @@ from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
 from src.evaluation import ComicInstanceEvaluator, ComicSemanticEvaluator
-from src.dataset.dataset_mapper import comic_mapper_page_wise, comic_mapper_panel_wise
+from src.dataset.dataset_mapper import comic_mapper, panel_mapper
 from src.dataset.helpers import EvalType
-from src.dataset.register_train_test import register_cropped
+
 
 class ComicTrainer(DefaultTrainer):
     """
@@ -31,7 +31,7 @@ class ComicTrainer(DefaultTrainer):
     """
 
     @classmethod
-    def build_evaluator(cls, cfg, dataset_name, output_folder=None, cropped_boxes=None):
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
         """
         Create evaluator(s) for a given dataset.
         This uses the special metadata "evaluator_type" associated with each
@@ -56,20 +56,8 @@ class ComicTrainer(DefaultTrainer):
         return DatasetEvaluators(evaluator_list)
 
     @classmethod
-    def build_train_loader(cls, cfg, cropped=True):
-        if not cropped:
-            return build_detection_train_loader(cfg, mapper=comic_mapper_page_wise)
-        else:
-            dataset_name = cfg.DATASETS.TRAIN[0]
-            dataset_dicts = DatasetCatalog.get(dataset_name)
-            print(dataset_name, len(dataset_dicts))
-            cropped_dataset_dicts = []
-            for dataset_dict in tqdm(dataset_dicts):
-                cropped_dataset_dicts.extend(comic_mapper_panel_wise(dataset_dict))
-            
-            new_cropped_name = register_cropped(dataset_name, 'train', cropped_dataset_dicts)
-            cfg.DATASETS.TRAIN = (new_cropped_name, )
-            return build_detection_train_loader(cfg, mapper=lambda x: x)          
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg, mapper=comic_mapper)         
 
     @classmethod
     def build_lr_scheduler(cls, cfg, optimizer):

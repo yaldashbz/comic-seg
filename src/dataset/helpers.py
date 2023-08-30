@@ -78,18 +78,14 @@ def extract_panel(image, segmentation):
     return panel
 
 
-def get_panels(sample, read_from_img_file=False):
+def get_panels(sample):
     """
     Return panels and cropped_boxes, in XYXY format
     """
     panels = []
     cropped_boxes = []
-    if 'image' in sample and not read_from_img_file:
-        image = sample['image'].cpu().numpy().transpose((1, 2, 0))
-        pil_im = Image.fromarray(np.uint8(image))
-    else:
-        pil_im = Image.open(sample['file_name'])
-    
+    pil_im = Image.open(sample['file_name'])
+
     for ann in sample['annotations']:
         if ann['category_id'] == 24: # panel
             bbox_mode = ann['bbox_mode']

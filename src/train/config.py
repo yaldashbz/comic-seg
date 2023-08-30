@@ -2,9 +2,14 @@ from detectron2.config import get_cfg
 from detectron2.projects.deeplab import add_deeplab_config
 from mask2former import add_maskformer2_config
 
-from src.dataset.register_train_test import *
+from src.dataset import (
+    NAME_MAPPER, 
+    register_train_test, 
+    register_panels
+)
 
-def setup(dataset_train_name, dataset_test_name):
+
+def _base_setup():
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
@@ -15,10 +20,8 @@ def setup(dataset_train_name, dataset_test_name):
     cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON = True
     cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = False
 
-    cfg.DATASETS.TRAIN = (dataset_train_name, )
-    cfg.DATASETS.TEST = (dataset_test_name, )
     cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.SOLVER.IMS_PER_BATCH = 8
+    cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.00025
     cfg.SOLVER.MAX_ITER = 1000
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 32
@@ -29,4 +32,22 @@ def setup(dataset_train_name, dataset_test_name):
     cfg.MODEL.PIXEL_MEAN = [184.70014834, 158.68679797, 118.3750071]
     cfg.MODEL.PIXEL_STD = [45.54069698, 40.70228227, 40.9410987]
     
+    return cfg
+
+def setup(data_mode, cropped=True, test_size=0.2, random_state=42):
+    dataset_name = NAME_MAPPER[data_mode]
+    print(dataset_name)
+    dataset_train_name, dataset_test_name = register_train_test(
+        dataset_name, 
+        test_size, 
+        random_state
+    )
+    cfg = _base_setup()
+    
+    if cropped:
+        dataset_train_name = register_panels(dataset_train_name, 'train')
+        dataset_test_name = register_panels(dataset_test_name, 'test')
+        
+    cfg.DATASETS.TRAIN = (dataset_train_name, )
+    cfg.DATASETS.TEST = (dataset_test_name, )
     return cfg

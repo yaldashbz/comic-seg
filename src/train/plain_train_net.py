@@ -37,7 +37,7 @@ def do_test(cfg, model):
 
 
 
-def do_train(cfg, model, resume=True, cropped=True, distributed=True):
+def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
     model.train()
     freeze_mask2former(model, distributed)
     optimizer = ComicTrainer.build_optimizer(cfg, model)
@@ -56,7 +56,7 @@ def do_train(cfg, model, resume=True, cropped=True, distributed=True):
     )
 
     writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
-    data_loader = ComicTrainer.build_train_loader(cfg, cropped)
+    if not data_loader: data_loader = ComicTrainer.build_train_loader(cfg)
     logger.info("Starting training from iteration {}".format(start_iter))
     with EventStorage(start_iter) as storage:
         for data, iteration in tqdm(zip(data_loader, range(start_iter, max_iter))):
