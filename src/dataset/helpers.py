@@ -30,9 +30,8 @@ def visualize_sample_anns(sample, category_id=None):
     for annotation in annotations:
         segment = annotation["segmentation"]
         if isinstance(segment, dict):
-            segment = convert_rle_mask_to_list(segment)
-        polygons = [segment[0]]
-        for polygon in polygons:
+            segment = convert_rle_mask_to_coords(segment)
+        for polygon in segment:
             polygon = [(x, y) for x, y in zip(polygon[0::2], polygon[1::2])]
             polygon = [tuple(map(int, point)) for point in polygon]
             draw = ImageDraw.Draw(image)
@@ -51,7 +50,7 @@ def visualize_dataset_dict(sample, metadata):
     plt.imshow(r)
 
 
-def show_seg_predictions(im, outputs, metadata):
+def show_seg_predictions(im, outputs, metadata, axis=1):
     """
     Show panoptic/instance/semantic predictions
     """
@@ -63,7 +62,7 @@ def show_seg_predictions(im, outputs, metadata):
     v = Visualizer(im[:, :, ::-1], metadata, scale=1.2, instance_mode=ColorMode.IMAGE_BW)
     semantic_result = v.draw_sem_seg(outputs["sem_seg"].argmax(0).to("cpu")).get_image()
     print("Panoptic segmentation (top), instance segmentation (middle), semantic segmentation (bottom)")
-    res = np.concatenate((panoptic_result, instance_result, semantic_result), axis=0)[:, :, ::-1]
+    res = np.concatenate((panoptic_result, instance_result, semantic_result), axis=axis)[:, :, ::-1]
     plt.figure(figsize=(40, 30))
     plt.imshow(res)
     plt.axis('off')
@@ -203,13 +202,16 @@ def crop_annotations(annotations, cropped_box):
     return cropped_annotations
 
 
-def convert_rle_mask_to_list(rle_mask):
-    mask_size = rle_mask['size']
-    mask_counts = rle_mask['counts']
-    binary_mask = mask_utils.decode({'size': mask_size, 'counts': mask_counts})
+def mask_to_contours(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_list = [contour.flatten().tolist() for contour in contours]
+    return contours_list
+
+
+def convert_rle_mask_to_coords(rle_mask):
+    binary_mask = mask_utils.decode(rle_mask)
     # Convert the binary mask to a list of [x, y] coordinates
-    coords = np.argwhere(binary_mask).flatten()
-    return [coords.tolist()]
+    return mask_to_contours(binary_mask)
 
 
 def compute_pixel_mean_std(dataset_dicts):

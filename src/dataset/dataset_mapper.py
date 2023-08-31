@@ -18,16 +18,16 @@ transform_list = [
 ]
 
 
-def panel_mapper(dataset_dict):
+def panel_mapper(sample):
     """
     Map a dataset_dict to multiple samples of panels using CropTransform
     """
-    panels, cropped_boxes = get_panels(dataset_dict)
+    panels, cropped_boxes = get_panels(sample)
     assert len(panels) == len(cropped_boxes)
-    image_id = dataset_dict['image_id']
+    image_id = sample['image_id']
     new_dataset_dicts = []
     for i, cropped_box in enumerate(cropped_boxes):
-        dataset_dict = copy.deepcopy(dataset_dict)
+        dataset_dict = copy.deepcopy(sample) # super important
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
         box = BoxMode.convert(cropped_box, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
         box = list(map(int, box))
@@ -50,6 +50,16 @@ def panel_mapper(dataset_dict):
         new_dataset_dicts.append(new_sample)
     
     return new_dataset_dicts
+
+
+def image2tensor_mapper(dataset_dict):
+    dataset_dict = copy.deepcopy(dataset_dict)
+    if 'image' not in dataset_dict:
+        image = utils.read_image(dataset_dict["file_name"], format="RGB")
+    else:
+        image = dataset_dict['image']
+    dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+    return dataset_dict
 
 
 def comic_mapper(dataset_dict):

@@ -3,7 +3,7 @@ from typing import List, Tuple
 from sklearn.model_selection import train_test_split
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
-from src.dataset.helpers import EvalType, get_all_panels_dataset_dicts
+from src.dataset.helpers import EvalType
 from src.dataset.dataset_mapper import panel_mapper
 
 def _register_subset_dataset(dataset, new_name, eval_type, metadata):

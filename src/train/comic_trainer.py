@@ -56,8 +56,8 @@ class ComicTrainer(DefaultTrainer):
         return DatasetEvaluators(evaluator_list)
 
     @classmethod
-    def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg, mapper=comic_mapper)         
+    def build_train_loader(cls, cfg, **kwargs):
+        return build_detection_train_loader(cfg, mapper=comic_mapper, **kwargs)         
 
     @classmethod
     def build_lr_scheduler(cls, cfg, optimizer):

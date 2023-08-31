@@ -18,6 +18,8 @@ from src.train.utils import freeze_mask2former
 
 
 logger = logging.getLogger("detectron2")
+file_handler = logging.FileHandler("logfile_freeze_backbone.log")
+logger.addHandler(file_handler)
 
 
 def do_test(cfg, model):
@@ -35,7 +37,6 @@ def do_test(cfg, model):
     if len(results) == 1:
         results = list(results.values())[0]
     return results
-
 
 
 def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
@@ -72,7 +73,6 @@ def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
             if comm.is_main_process():
                 storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
                 
-            print(f'Loss {losses_reduced}')
             wandb.log({"loss": losses_reduced})
 
             optimizer.zero_grad()

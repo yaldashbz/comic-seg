@@ -1,8 +1,6 @@
 import numpy as np
 import pycocotools.mask as mask_util
 
-from src.dataset.helpers import convert_rle_mask_to_list
-
 
 def coco_segmentation_to_mask(segmentation, height, width):
     """
