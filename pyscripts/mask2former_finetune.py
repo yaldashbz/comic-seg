@@ -9,6 +9,8 @@ import detectron2.utils.comm as comm
 def cli():
     parser = default_argument_parser()
     parser.add_argument('--data-mode', default='placid')
+    parser.add_argument('--wandb-name', default='mask2former_fn')
+    parser.add_argument('--batch-size', default=4)
     parser.add_argument('--test-size', default=0.2)
     parser.add_argument('--random-state', default=42)
     parser.add_argument('--panel', action='store_true')
@@ -25,9 +27,13 @@ def main(args):
         config={
             "panel_wise": args.panel,
             "dataset": args.data_mode,
-        }
+        },
+        name=args.wandb_name
     )
-    cfg = setup(args.data_mode, args.panel, args.test_size, args.random_state)
+    cfg = setup(
+        args.data_mode, args.panel, args.test_size, 
+        args.random_state, args.batch_size
+    )
     print("Command Line Args:", args)
     model = ComicTrainer.build_model(cfg) 
     distributed = comm.get_world_size() > 1

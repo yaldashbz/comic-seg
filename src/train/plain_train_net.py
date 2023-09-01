@@ -4,16 +4,16 @@ import logging
 import torch
 from tqdm import tqdm
 from collections import OrderedDict
+import torch.utils.checkpoint as checkpoint
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
 from detectron2.data import build_detection_test_loader
-from detectron2.engine import default_argument_parser, default_setup, default_writers, launch
+from detectron2.engine import default_writers
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
 from src.train.comic_trainer import ComicTrainer
-from src.train.config import setup
 from src.train.utils import freeze_mask2former
 
 
@@ -21,6 +21,10 @@ logger = logging.getLogger("detectron2")
 file_handler = logging.FileHandler("logfile_freeze_backbone.log")
 logger.addHandler(file_handler)
 
+
+
+
+# Enable gradient checkpointing for the forward pass
 
 def do_test(cfg, model):
     results = OrderedDict()
@@ -41,7 +45,7 @@ def do_test(cfg, model):
 
 def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
     model.train()
-    freeze_mask2former(model, distributed)
+    # freeze_mask2former(model, distributed)
     optimizer = ComicTrainer.build_optimizer(cfg, model)
     scheduler = ComicTrainer.build_lr_scheduler(cfg, optimizer)
 
@@ -61,7 +65,7 @@ def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
     if not data_loader: data_loader = ComicTrainer.build_train_loader(cfg)
     logger.info("Starting training from iteration {}".format(start_iter))
     with EventStorage(start_iter) as storage:
-        for data, iteration in tqdm(zip(data_loader, range(start_iter, max_iter))):
+        for iteration, data in tqdm(enumerate(data_loader)):
             storage.iter = iteration
 
             loss_dict = model(data)
@@ -72,8 +76,6 @@ def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
             losses_reduced = sum(loss for loss in loss_dict_reduced.values())
             if comm.is_main_process():
                 storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
-                
-            wandb.log({"loss": losses_reduced})
 
             optimizer.zero_grad()
             losses.backward()
@@ -95,4 +97,5 @@ def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
             ):
                 for writer in writers:
                     writer.write()
+                wandb.log(dict(total_loss=losses_reduced, **loss_dict_reduced))
             periodic_checkpointer.step(iteration)

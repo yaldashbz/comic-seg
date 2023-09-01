@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Any, Dict
 import cv2
 import copy
 import torch
@@ -10,12 +10,21 @@ from detectron2.structures.boxes import BoxMode
 
 from src.dataset.helpers import get_panels
 
-transform_list = [
+TRAIN_TRANSFORM_LIST = [
     T.RandomRotation(angle=(-10, 10)),  # Randomly rotate the image by -10 to +10 degrees
     T.RandomBrightness(0.8, 1.8),
     T.RandomContrast(0.6, 1.3),
     T.RandomFlip(prob=0.5, horizontal=True, vertical=False)
 ]
+
+TEST_TRANSFORM_LIST = [
+    T.NoOpTransform()
+]
+
+TRANSFORM_LISTS = {
+    'train': TRAIN_TRANSFORM_LIST,
+    'test': TEST_TRANSFORM_LIST
+}
 
 
 def panel_mapper(sample):
@@ -42,8 +51,8 @@ def panel_mapper(sample):
         ]
         new_sample = {
             'image': image,
-            'height': image.shape[1],
-            'width': image.shape[0],
+            'height': image.shape[0],
+            'width': image.shape[1],
             'image_id': int(f'{image_id}{i}'),
             'annotations': [ann for ann in annos if len(ann['segmentation'])],
         }
@@ -52,17 +61,9 @@ def panel_mapper(sample):
     return new_dataset_dicts
 
 
-def image2tensor_mapper(dataset_dict):
-    dataset_dict = copy.deepcopy(dataset_dict)
-    if 'image' not in dataset_dict:
-        image = utils.read_image(dataset_dict["file_name"], format="RGB")
-    else:
-        image = dataset_dict['image']
-    dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
-    return dataset_dict
-
-
-def comic_mapper(dataset_dict):
+def comic_mapper(dataset_dict, mode='train'):
+    assert mode in ['train', 'test']
+    transform_list = TRANSFORM_LISTS[mode]
     dataset_dict = copy.deepcopy(dataset_dict)
     if 'image' not in dataset_dict:
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
@@ -78,4 +79,14 @@ def comic_mapper(dataset_dict):
     instances = utils.annotations_to_instances(annos, image.shape[:2])
     dataset_dict["instances"] = utils.filter_empty_instances(instances)
     dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+    dataset_dict["height"] = image.shape[0]
+    dataset_dict["width"] = image.shape[1]
     return dataset_dict
+
+
+class ComicDatasetMapper:
+    def __init__(self, is_train=True) -> None:
+        self.mode = 'train' if is_train else 'test'
+    
+    def __call__(self, dataset_dict: Dict) -> Any:
+        return comic_mapper(dataset_dict, self.mode)

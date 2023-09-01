@@ -1,6 +1,6 @@
 from detectron2.config import get_cfg
 from detectron2.projects.deeplab import add_deeplab_config
-from mask2former import add_maskformer2_config
+from Mask2Former.mask2former import add_maskformer2_config
 
 from src.dataset import (
     NAME_MAPPER, 
@@ -9,7 +9,7 @@ from src.dataset import (
 )
 
 
-def _base_setup():
+def base_setup(**kwargs):
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
@@ -21,7 +21,7 @@ def _base_setup():
     cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = False
 
     cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.SOLVER.IMS_PER_BATCH = 4
+    cfg.SOLVER.IMS_PER_BATCH = kwargs.get('batch_size', 2)
     cfg.SOLVER.BASE_LR = 0.00025
     cfg.SOLVER.MAX_ITER = 1000
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 32
@@ -35,7 +35,7 @@ def _base_setup():
     
     return cfg
 
-def setup(data_mode, cropped=True, test_size=0.2, random_state=42):
+def setup(data_mode, cropped=True, test_size=0.2, random_state=42, batch_size=2):
     dataset_name = NAME_MAPPER[data_mode]
     print(dataset_name)
     dataset_train_name, dataset_test_name = register_train_test(
@@ -43,7 +43,7 @@ def setup(data_mode, cropped=True, test_size=0.2, random_state=42):
         test_size, 
         random_state
     )
-    cfg = _base_setup()
+    cfg = base_setup(batch_size=batch_size)
     
     if cropped:
         dataset_train_name = register_panels(dataset_train_name, 'train')

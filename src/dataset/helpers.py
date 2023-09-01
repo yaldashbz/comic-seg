@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.structures.boxes import BoxMode
+from detectron2.data import DatasetCatalog
 import pycocotools.mask as mask_utils
 
 from .utils import *
@@ -221,3 +222,10 @@ def compute_pixel_mean_std(dataset_dicts):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pixel_values.extend(image.reshape(-1, 3))
     return np.mean(pixel_values, axis=0), np.std(pixel_values, axis=0)
+
+
+def get_min_max_sizes(dataset_name):
+    dataset_dicts = DatasetCatalog.get(dataset_name)
+    min_size = min([min(data["height"], data["width"]) for data in dataset_dicts])
+    max_size = max([max(data["height"], data["width"]) for data in dataset_dicts])
+    return min_size, max_size
