@@ -82,7 +82,8 @@ class ComicInstanceEvaluator(DatasetEvaluator):
         ious = self._compute_iou()
         mean_iou = np.mean(ious)
 
-        return {
+        return dict(segm={
             "mean_iou": mean_iou,
-            "iou_per_class": dict(enumerate(ious))
-        }
+            **{self.metadata.thing_classes[class_id]: iou 
+               for class_id, iou in dict(enumerate(ious)).items()}
+        })

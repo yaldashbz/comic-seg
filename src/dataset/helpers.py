@@ -16,9 +16,8 @@ from .utils import *
 
 class EvalType(Enum):
     COMIC_INSTANCE = 'comic_instance'
-    COMIC_INSTANCE_PANEL = 'comic_instance_panel'
     COMIC_SEM_SEG = 'comic_sem_seg'
-    COMIC_SEM_SEG_PANEL = 'comic_sem_seg_panel'
+    COCO = 'coco'
 
 
 def visualize_sample_anns(sample, category_id=None):

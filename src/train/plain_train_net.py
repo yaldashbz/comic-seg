@@ -8,19 +8,18 @@ import torch.utils.checkpoint as checkpoint
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
-from detectron2.data import build_detection_test_loader
+from detectron2.data import build_detection_test_loader, MetadataCatalog
 from detectron2.engine import default_writers
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
 from src.train.comic_trainer import ComicTrainer
-from src.train.utils import freeze_mask2former
+from src.train.utils import *
 
 
 logger = logging.getLogger("detectron2")
-file_handler = logging.FileHandler("logfile_freeze_backbone.log")
-logger.addHandler(file_handler)
-
+# file_handler = logging.FileHandler("logfile_freeze_backbone.log")
+# logger.addHandler(file_handler)
 
 
 
@@ -29,8 +28,8 @@ logger.addHandler(file_handler)
 def do_test(cfg, model):
     results = OrderedDict()
     for dataset_name in cfg.DATASETS.TEST:
-        data_loader = build_detection_test_loader(cfg, dataset_name)
-        evaluator = ComicTrainer.get_evaluator(
+        data_loader = ComicTrainer.build_test_loader(cfg, dataset_name)
+        evaluator = ComicTrainer.build_evaluator(
             cfg, dataset_name, os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
         )
         results_i = inference_on_dataset(model, data_loader, evaluator)
@@ -43,9 +42,9 @@ def do_test(cfg, model):
     return results
 
 
-def do_train(cfg, model, resume=True, distributed=True, data_loader=None):
+def do_train(cfg, model, mode=FNType.MATHING_LAYER, resume=True, distributed=True, data_loader=None):
     model.train()
-    # freeze_mask2former(model, distributed)
+    freeze_mask2former(model, distributed, mode=mode)
     optimizer = ComicTrainer.build_optimizer(cfg, model)
     scheduler = ComicTrainer.build_lr_scheduler(cfg, optimizer)
 

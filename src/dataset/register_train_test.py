@@ -15,12 +15,17 @@ def _register_subset_dataset(dataset, new_name, eval_type, metadata):
     new_metadata.thing_classes = metadata.thing_classes
 
 
-def register_train_test(dataset_name, test_size=0.2, random_state=42) -> Tuple[str, str]:
+def register_train_test(
+    dataset_name, 
+    test_size=0.2, random_state=42, 
+    eval_type: Tuple[str] = None
+) -> Tuple[str, str]:
     print('registering train test dataset ...')
     dataset_dicts = DatasetCatalog.get(dataset_name)
     metadata = MetadataCatalog.get(dataset_name)
     new_train_name = f'{dataset_name}_train'
     new_test_name = f'{dataset_name}_test'
+    eval_type = (EvalType.COCO.value, ) if eval_type is not None else eval_type
 
     if (new_train_name not in MetadataCatalog.list()) \
         and (new_test_name not in MetadataCatalog.list()):
@@ -30,17 +35,18 @@ def register_train_test(dataset_name, test_size=0.2, random_state=42) -> Tuple[s
             random_state=random_state
         )
         _register_subset_dataset(
-            train_dataset, new_train_name, EvalType.COMIC_SEM_SEG, metadata
+            train_dataset, new_train_name, eval_type, metadata
         )
         _register_subset_dataset(
-            test_dataset, new_test_name, EvalType.COMIC_SEM_SEG, metadata
+            test_dataset, new_test_name, eval_type, metadata
         )
     return new_train_name, new_test_name
 
 
-def register_panels(dataset_name: str, mode: str):
+def register_panels(dataset_name: str, mode: str, eval_type: Tuple[str] = None):
     assert mode in ['train', 'test']
 
+    eval_type = (EvalType.COMIC_SEM_SEG.value, ) if eval_type is None else eval_type
     dataset_dicts = DatasetCatalog.get(dataset_name)
     print(dataset_name, len(dataset_dicts))
     new_cropped_name = f'{dataset_name}_cropped'
@@ -51,13 +57,13 @@ def register_panels(dataset_name: str, mode: str):
     
     cropped_dataset_dicts = []
     print(f"Collect all panels for mode {mode} ...")
-    for dataset_dict in tqdm(dataset_dicts[:5]):
+    for dataset_dict in tqdm(dataset_dicts):
         cropped_dataset_dicts.extend(panel_mapper(dataset_dict))
     
     _register_subset_dataset(
         cropped_dataset_dicts, 
         new_cropped_name, 
-        EvalType.COMIC_SEM_SEG_PANEL, 
+        eval_type,
         MetadataCatalog.get(dataset_name)
     )
     return new_cropped_name

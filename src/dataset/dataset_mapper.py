@@ -61,7 +61,7 @@ def panel_mapper(sample):
     return new_dataset_dicts
 
 
-def comic_mapper(dataset_dict, mode='train'):
+def comic_mapper(cfg, dataset_dict, mode='train'):
     assert mode in ['train', 'test']
     transform_list = TRANSFORM_LISTS[mode]
     dataset_dict = copy.deepcopy(dataset_dict)
@@ -69,7 +69,16 @@ def comic_mapper(dataset_dict, mode='train'):
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
     else:
         image = dataset_dict['image']
-    image, transforms = T.apply_transform_gens(transform_list, image)
+    image, transforms = T.apply_transform_gens(
+        [
+            T.ResizeShortestEdge(
+                cfg.INPUT.MIN_SIZE_TRAIN,
+                cfg.INPUT.MAX_SIZE_TRAIN,
+            ),
+            *transform_list
+        ], 
+        image
+    )
     annos = [
         utils.transform_instance_annotations(obj, transforms, image.shape[:2])
         for obj in dataset_dict.pop("annotations")
@@ -85,8 +94,9 @@ def comic_mapper(dataset_dict, mode='train'):
 
 
 class ComicDatasetMapper:
-    def __init__(self, is_train=True) -> None:
+    def __init__(self, cfg, is_train=True) -> None:
+        self.cfg = cfg
         self.mode = 'train' if is_train else 'test'
     
     def __call__(self, dataset_dict: Dict) -> Any:
-        return comic_mapper(dataset_dict, self.mode)
+        return comic_mapper(self.cfg, dataset_dict, self.mode)

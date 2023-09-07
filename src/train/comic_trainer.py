@@ -3,25 +3,22 @@ import copy
 import itertools
 import logging
 import torch
-from tqdm import tqdm
 from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
-import detectron2.utils.comm as comm
 import detectron2.data.transforms as T
-from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
-from detectron2.projects.deeplab import add_deeplab_config, build_lr_scheduler
+from detectron2.projects.deeplab import build_lr_scheduler
 from detectron2.evaluation import DatasetEvaluators
 from detectron2.solver.build import maybe_add_gradient_clipping
 from detectron2.engine import DefaultTrainer, DefaultPredictor
-from detectron2.data import build_detection_test_loader, build_detection_train_loader
-from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.modeling import build_model
-from detectron2.solver import build_lr_scheduler, build_optimizer
-from detectron2.engine import default_argument_parser, default_setup, default_writers, launch
-from detectron2.utils.events import EventStorage
-from detectron2.evaluation import inference_on_dataset, print_csv_format
-
+from detectron2.data import (
+    build_detection_test_loader, 
+    build_detection_train_loader,
+    MetadataCatalog
+)
+from detectron2.data import MetadataCatalog
+from detectron2.solver import build_lr_scheduler
+from detectron2.evaluation.coco_evaluation import COCOEvaluator
 from src.evaluation import ComicInstanceEvaluator, ComicSemanticEvaluator
 from src.dataset.dataset_mapper import ComicDatasetMapper
 from src.dataset.helpers import EvalType
@@ -30,10 +27,11 @@ from Mask2Former.mask2former.test_time_augmentation import SemanticSegmentorWith
 
 
 class ComicPredictor(DefaultPredictor):
-    def __init__(self, cfg):
+    def __init__(self, cfg, weights_path=None):
+        if weights_path: cfg.MODEL.WEIGHTS = weights_path
         super().__init__(cfg)
         self.aug = T.NoOpTransform()
-    
+
     def __call__(self, original_image):
          with torch.no_grad():  # https://github.com/sphinx-doc/sphinx/issues/4258
             # Apply pre-processing to image.
@@ -67,15 +65,20 @@ class ComicTrainer(DefaultTrainer):
         if output_folder is None:
             output_folder = cfg.OUTPUT_DIR
         evaluator_list = []
-        evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
+        # we manage to have some evaluators
+        evaluator_types = MetadataCatalog.get(dataset_name).evaluator_type
 
-        if evaluator_type in [EvalType.COMIC_INSTANCE, EvalType.COMIC_INSTANCE_PANEL]:
-            evaluator_list.append(ComicInstanceEvaluator(dataset_name))
+        for evaluator_type in evaluator_types:
+            if evaluator_type == EvalType.COCO.value:
+                evaluator_list.append(COCOEvaluator(dataset_name))
 
-        if evaluator_type in [EvalType.COMIC_SEM_SEG, EvalType.COMIC_SEM_SEG_PANEL]:
-            evaluator_list.append(ComicSemanticEvaluator(dataset_name))
+            if evaluator_type == EvalType.COMIC_INSTANCE.value:
+                evaluator_list.append(ComicInstanceEvaluator(dataset_name))
 
-        elif len(evaluator_list) == 1:
+            if evaluator_type == EvalType.COMIC_SEM_SEG.value:
+                evaluator_list.append(ComicSemanticEvaluator(dataset_name))
+
+        if len(evaluator_list) == 1:
             return evaluator_list[0]
 
         return DatasetEvaluators(evaluator_list)
@@ -83,7 +86,7 @@ class ComicTrainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg, **kwargs):
         return build_detection_train_loader(
-            cfg, mapper=ComicDatasetMapper(is_train=True), 
+            cfg, mapper=ComicDatasetMapper(cfg=cfg, is_train=True), 
             **kwargs
         )
     
@@ -92,7 +95,7 @@ class ComicTrainer(DefaultTrainer):
         # dataset_name is same as cfg.DATASET.TEST[0]
         return build_detection_test_loader(
             cfg, dataset_name,
-            mapper=ComicDatasetMapper(is_train=False)
+            mapper=ComicDatasetMapper(cfg=cfg, is_train=False)
         )
 
     @classmethod

@@ -10,10 +10,18 @@ def cli():
     parser = default_argument_parser()
     parser.add_argument('--data-mode', default='placid')
     parser.add_argument('--wandb-name', default='mask2former_fn')
-    parser.add_argument('--batch-size', default=4)
-    parser.add_argument('--test-size', default=0.2)
-    parser.add_argument('--random-state', default=42)
-    parser.add_argument('--panel', action='store_true')
+    parser.add_argument(
+        '--fn-mode', 
+        default=0,
+        type=int,
+        choices=[0, 1, 2, 3]
+    )
+    parser.add_argument('--batch-size', type=int, default=2)
+    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--test-size', type=float, default=0.2)
+    parser.add_argument('--random-state', type=int, default=42)
+    parser.add_argument('--cropped', action='store_true')
+    parser.add_argument('--eval-type', choices=[member.value for member in EvalType], nargs='+')
     args = parser.parse_args()
     return args
 
@@ -25,15 +33,14 @@ def main(args):
     wandb.init(
         project="comic-seg",
         config={
-            "panel_wise": args.panel,
+            "panel_wise": args.cropped,
             "dataset": args.data_mode,
+            "lr": args.lr,
+            "batch_size": args.batch_size
         },
         name=args.wandb_name
     )
-    cfg = setup(
-        args.data_mode, args.panel, args.test_size, 
-        args.random_state, args.batch_size
-    )
+    cfg = setup(args)
     print("Command Line Args:", args)
     model = ComicTrainer.build_model(cfg) 
     distributed = comm.get_world_size() > 1
@@ -44,7 +51,7 @@ def main(args):
             broadcast_buffers=False,
             find_unused_parameters=True
         ) 
-    do_train(cfg, model, resume=args.resume, distributed=distributed)
+    do_train(cfg, model, mode=args.fn_mode, resume=args.resume, distributed=distributed)
     do_test(cfg, model)
 
 
@@ -52,6 +59,7 @@ if __name__ == '__main__':
     sys.path.append(os.getcwd())
     sys.path.append(os.path.join(os.getcwd(), 'Mask2Former'))
 
+    from src.dataset.helpers import EvalType
 
     args = cli()
     print("Command Line Args:", args)

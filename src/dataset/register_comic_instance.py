@@ -176,6 +176,8 @@ if YVES_NAME not in MetadataCatalog.list():
     register_yves_instances()
 
 
+# remember these are just mappers, 
+# don't use these directly for mapping in detectron datasets
 COMIC_CATEGORIES = open_json(SINERGIA_INSTANCES_MODIFIED_FILE)['categories']
 COMIC_CATEGORY2CLASS_ID = {k['name']: k['id'] for k in COMIC_CATEGORIES}
 COMIC_CLASS_ID2CATEGORY = {v: k for k, v in COMIC_CATEGORY2CLASS_ID.items()}
