@@ -6,6 +6,7 @@ class FNType(enum.Enum):
 
 
 def _fn_decoder(model):
+    # pixel decoder
     for param in model.sem_seg_head.parameters():
         param.requires_grad = True
 

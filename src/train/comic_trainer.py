@@ -86,7 +86,7 @@ class ComicTrainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg, **kwargs):
         return build_detection_train_loader(
-            cfg, mapper=ComicDatasetMapper(cfg=cfg, is_train=True), 
+            cfg, mapper=ComicDatasetMapper(cfg=cfg, is_train=True, max_size=500), 
             **kwargs
         )
     

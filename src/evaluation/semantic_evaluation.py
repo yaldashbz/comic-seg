@@ -34,7 +34,7 @@ class ComicSemanticEvaluator(DatasetEvaluator):
     ):
         cropped_box = kwargs.get("cropped_box", None)
 
-        for annotation in tqdm(annotations):
+        for annotation in annotations:
             category_id = annotation["category_id"]
             gt_mask = annotation["segmentation"]
             try:

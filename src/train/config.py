@@ -36,6 +36,8 @@ def base_setup(**kwargs):
     cfg.SOLVER.IMS_PER_BATCH = kwargs.get('batch_size', 1)
     cfg.SOLVER.BASE_LR = kwargs.get('lr', 0.0001)
     cfg.SOLVER.OPTIMIZER = 'SGD'
+    cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
+    cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', 200)
     # cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
     cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
@@ -51,7 +53,11 @@ def setup(args):
         args.random_state,
         eval_type=args.eval_type
     )
-    cfg = base_setup(batch_size=args.batch_size, lr=args.lr)
+    cfg = base_setup(
+        batch_size=args.batch_size, 
+        lr=args.lr, max_iter=args.max_iter, 
+        chkp_period=args.chkp_period
+    )
     
     warnings.filterwarnings('ignore')
     if args.cropped:
@@ -61,7 +67,7 @@ def setup(args):
         
     cfg.DATASETS.TRAIN = (dataset_train_name, )
     cfg.DATASETS.TEST = (dataset_test_name, )
-    min_size, max_size = get_min_max_sizes(dataset_train_name)
-    cfg.INPUT.MIN_SIZE_TRAIN = min_size
-    cfg.INPUT.MAX_SIZE_TRAIN = max_size
+    # min_size, max_size = get_min_max_sizes(dataset_train_name)
+    # cfg.INPUT.MIN_SIZE_TRAIN = min_size
+    # cfg.INPUT.MAX_SIZE_TRAIN = max_size
     return cfg

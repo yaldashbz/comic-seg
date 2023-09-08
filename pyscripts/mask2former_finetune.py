@@ -21,25 +21,16 @@ def cli():
     parser.add_argument('--test-size', type=float, default=0.2)
     parser.add_argument('--random-state', type=int, default=42)
     parser.add_argument('--cropped', action='store_true')
+    parser.add_argument('--max-iter', type=int, default=1000)
+    parser.add_argument('--chkp-period', type=int, default=200)
     parser.add_argument('--eval-type', choices=[member.value for member in EvalType], nargs='+')
     args = parser.parse_args()
     return args
 
 
-def main(args):
-    import wandb
+def plain_main(args):
     from src.train import setup, ComicTrainer, do_train, do_test
 
-    wandb.init(
-        project="comic-seg",
-        config={
-            "panel_wise": args.cropped,
-            "dataset": args.data_mode,
-            "lr": args.lr,
-            "batch_size": args.batch_size
-        },
-        name=args.wandb_name
-    )
     cfg = setup(args)
     print("Command Line Args:", args)
     model = ComicTrainer.build_model(cfg) 
@@ -55,14 +46,42 @@ def main(args):
     do_test(cfg, model)
 
 
+def main(args):
+    from src.train import setup, ComicTrainer
+
+    cfg = setup(args)
+    print("Command Line Args:", args)
+    
+    """
+    If you'd like to do anything fancier than the standard training logic,
+    consider writing your own training loop (see plain_train_net.py) or
+    subclassing the trainer.
+    """
+    trainer = ComicTrainer(cfg)
+    trainer.resume_or_load(resume=False)
+    return trainer.train()
+
+
 if __name__ == '__main__':
     sys.path.append(os.getcwd())
     sys.path.append(os.path.join(os.getcwd(), 'Mask2Former'))
 
+    import wandb
     from src.dataset.helpers import EvalType
 
     args = cli()
     print("Command Line Args:", args)
+    wandb.init(
+        project="comic-seg",
+        config={
+            "panel_wise": args.cropped,
+            "dataset": args.data_mode,
+            "lr": args.lr,
+            "batch_size": args.batch_size
+        },
+        name=args.wandb_name
+    )
+
     launch(
         main,
         args.num_gpus,

@@ -61,24 +61,13 @@ def panel_mapper(sample):
     return new_dataset_dicts
 
 
-def comic_mapper(cfg, dataset_dict, mode='train'):
-    assert mode in ['train', 'test']
-    transform_list = TRANSFORM_LISTS[mode]
+def comic_mapper(dataset_dict, transform_list):
     dataset_dict = copy.deepcopy(dataset_dict)
     if 'image' not in dataset_dict:
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
     else:
         image = dataset_dict['image']
-    image, transforms = T.apply_transform_gens(
-        [
-            T.ResizeShortestEdge(
-                cfg.INPUT.MIN_SIZE_TRAIN,
-                cfg.INPUT.MAX_SIZE_TRAIN,
-            ),
-            *transform_list
-        ], 
-        image
-    )
+    image, transforms = T.apply_transform_gens(transform_list, image)
     annos = [
         utils.transform_instance_annotations(obj, transforms, image.shape[:2])
         for obj in dataset_dict.pop("annotations")
@@ -87,16 +76,25 @@ def comic_mapper(cfg, dataset_dict, mode='train'):
     dataset_dict["annotations"] = [ann for ann in annos if len(ann['segmentation'])]
     instances = utils.annotations_to_instances(annos, image.shape[:2])
     dataset_dict["instances"] = utils.filter_empty_instances(instances)
-    dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+    dataset_dict["image"] = image
     dataset_dict["height"] = image.shape[0]
     dataset_dict["width"] = image.shape[1]
     return dataset_dict
 
 
 class ComicDatasetMapper:
-    def __init__(self, cfg, is_train=True) -> None:
+    def __init__(self, cfg, is_train=True, max_size=None) -> None:
         self.cfg = cfg
-        self.mode = 'train' if is_train else 'test'
+        mode = 'train' if is_train else 'test'
+        self.transform_list = TRANSFORM_LISTS[mode]
+        self.max_size = max_size 
     
     def __call__(self, dataset_dict: Dict) -> Any:
-        return comic_mapper(self.cfg, dataset_dict, self.mode)
+        dataset_dict = comic_mapper(dataset_dict, self.transform_list)
+        if self.max_size:
+            h, w = dataset_dict['height'], dataset_dict['width']
+            transform_list = [T.ResizeShortestEdge(min(h, w, self.max_size), self.max_size)]
+            dataset_dict = comic_mapper(dataset_dict, transform_list)
+        image = dataset_dict['image']
+        dataset_dict['image'] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+        return dataset_dict

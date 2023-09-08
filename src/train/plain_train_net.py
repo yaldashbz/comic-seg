@@ -4,11 +4,9 @@ import logging
 import torch
 from tqdm import tqdm
 from collections import OrderedDict
-import torch.utils.checkpoint as checkpoint
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
-from detectron2.data import build_detection_test_loader, MetadataCatalog
 from detectron2.engine import default_writers
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
@@ -18,8 +16,8 @@ from src.train.utils import *
 
 
 logger = logging.getLogger("detectron2")
-# file_handler = logging.FileHandler("logfile_freeze_backbone.log")
-# logger.addHandler(file_handler)
+file_handler = logging.FileHandler("logfile_fn_matching.log")
+logger.addHandler(file_handler)
 
 
 
@@ -64,7 +62,7 @@ def do_train(cfg, model, mode=FNType.MATHING_LAYER, resume=True, distributed=Tru
     if not data_loader: data_loader = ComicTrainer.build_train_loader(cfg)
     logger.info("Starting training from iteration {}".format(start_iter))
     with EventStorage(start_iter) as storage:
-        for iteration, data in tqdm(enumerate(data_loader)):
+        for iteration, data in tqdm(zip(data_loader, range(start_iter, max_iter))):
             storage.iter = iteration
 
             loss_dict = model(data)
