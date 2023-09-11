@@ -1,6 +1,7 @@
 import os
 import sys
 
+from collections import defaultdict
 from torch.nn.parallel import DistributedDataParallel
 from detectron2.engine import default_argument_parser, launch
 import detectron2.utils.comm as comm
@@ -8,6 +9,7 @@ import detectron2.utils.comm as comm
 
 def cli():
     parser = default_argument_parser()
+    parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--data-mode', default='placid')
     parser.add_argument('--wandb-name', default='mask2former_fn')
     parser.add_argument(
@@ -21,11 +23,41 @@ def cli():
     parser.add_argument('--test-size', type=float, default=0.2)
     parser.add_argument('--random-state', type=int, default=42)
     parser.add_argument('--cropped', action='store_true')
-    parser.add_argument('--max-iter', type=int, default=1000)
+    parser.add_argument('--epochs', type=int, default=1000)
+    parser.add_argument('--steps', type=int, default=1000, nargs='+')
     parser.add_argument('--chkp-period', type=int, default=200)
     parser.add_argument('--eval-type', choices=[member.value for member in EvalType], nargs='+')
     args = parser.parse_args()
     return args
+
+
+def init_wandb(args):
+    wandb.init(
+        project="comic-seg",
+        config={
+            "panel_wise": args.cropped,
+            "dataset": args.data_mode,
+            "lr": args.lr,
+            "batch_size": args.batch_size
+        },
+        name=args.wandb_name
+    )
+
+
+def log_wandb(trainer, cfg):    
+    log = defaultdict(list)
+    window_size = cfg.ONE_EPOCH
+    histories = trainer.storage.histories()
+    for k, v in histories.items():
+        val = v.values()
+        if 'loss' in k:
+            for i in range(0, len(val), window_size):
+                window = val[i:i+window_size]
+                window = [w[0] for w in window]
+                avg = sum(window) / len(window)
+                log[k].append(avg)
+                wandb.log({k: avg})
+    return log
 
 
 def plain_main(args):
@@ -42,7 +74,7 @@ def plain_main(args):
             broadcast_buffers=False,
             find_unused_parameters=True
         ) 
-    do_train(cfg, model, mode=args.fn_mode, resume=args.resume, distributed=distributed)
+    do_train(cfg, model, mode=args.fn_mode, resume=args.resume, distributed=distributed, wandb_en=args.wandb)
     do_test(cfg, model)
 
 
@@ -59,7 +91,11 @@ def main(args):
     """
     trainer = ComicTrainer(cfg)
     trainer.resume_or_load(resume=False)
-    return trainer.train()
+    trainer.train()
+
+    if args.wandb:
+        log_wandb(trainer, cfg)
+        wandb.finish()
 
 
 if __name__ == '__main__':
@@ -71,16 +107,8 @@ if __name__ == '__main__':
 
     args = cli()
     print("Command Line Args:", args)
-    wandb.init(
-        project="comic-seg",
-        config={
-            "panel_wise": args.cropped,
-            "dataset": args.data_mode,
-            "lr": args.lr,
-            "batch_size": args.batch_size
-        },
-        name=args.wandb_name
-    )
+    if args.wandb:
+        init_wandb(args)
 
     launch(
         main,

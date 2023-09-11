@@ -1,5 +1,6 @@
 import warnings
 
+from detectron2.data import DatasetCatalog
 from detectron2.config import get_cfg
 from detectron2.projects.deeplab import add_deeplab_config
 from Mask2Former.mask2former import add_maskformer2_config
@@ -13,6 +14,7 @@ from src.dataset import (
 
 
 def base_setup(**kwargs):
+    print(kwargs)
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
@@ -34,10 +36,10 @@ def base_setup(**kwargs):
     
     # optimizer
     cfg.SOLVER.IMS_PER_BATCH = kwargs.get('batch_size', 1)
-    cfg.SOLVER.BASE_LR = kwargs.get('lr', 0.0001)
+    cfg.SOLVER.BASE_LR = kwargs.get('lr', cfg.SOLVER.BASE_LR)
     cfg.SOLVER.OPTIMIZER = 'SGD'
-    cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
-    cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', 200)
+    # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
+    cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', cfg.SOLVER.CHECKPOINT_PERIOD)
     # cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
     cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
@@ -53,11 +55,7 @@ def setup(args):
         args.random_state,
         eval_type=args.eval_type
     )
-    cfg = base_setup(
-        batch_size=args.batch_size, 
-        lr=args.lr, max_iter=args.max_iter, 
-        chkp_period=args.chkp_period
-    )
+    cfg = base_setup(**vars(args))
     
     warnings.filterwarnings('ignore')
     if args.cropped:
@@ -67,6 +65,21 @@ def setup(args):
         
     cfg.DATASETS.TRAIN = (dataset_train_name, )
     cfg.DATASETS.TEST = (dataset_test_name, )
+    
+    epochs = args.epochs
+    batch_size = args.batch_size
+    num_gpus = args.num_gpus
+    train_size = len(DatasetCatalog.get(dataset_train_name))
+    one_epoch = train_size / (batch_size * num_gpus)
+    
+    # for logging
+    cfg.ONE_EPOCH = int(one_epoch)
+    cfg.TEST.EVAL_PERIOD = cfg.ONE_EPOCH
+    # solver
+    cfg.SOLVER.MAX_ITER = int(one_epoch * epochs)
+    print('LR is: ', cfg.SOLVER.BASE_LR)
+    print('MAX ITER is: ', cfg.SOLVER.MAX_ITER)
+    print('STEPS is: ', cfg.SOLVER.STEPS)
     # min_size, max_size = get_min_max_sizes(dataset_train_name)
     # cfg.INPUT.MIN_SIZE_TRAIN = min_size
     # cfg.INPUT.MAX_SIZE_TRAIN = max_size
