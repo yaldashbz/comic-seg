@@ -25,7 +25,7 @@ def register_train_test(
     metadata = MetadataCatalog.get(dataset_name)
     new_train_name = f'{dataset_name}_train'
     new_test_name = f'{dataset_name}_test'
-    eval_type = (EvalType.COCO.value, ) if eval_type is not None else eval_type
+    eval_type = EvalType.COCO.value if eval_type is not None else eval_type
 
     if (new_train_name not in MetadataCatalog.list()) \
         and (new_test_name not in MetadataCatalog.list()):
@@ -46,7 +46,7 @@ def register_train_test(
 def register_panels(dataset_name: str, mode: str, eval_type: Tuple[str] = None):
     assert mode in ['train', 'test']
 
-    eval_type = (EvalType.COMIC_SEM_SEG.value, ) if eval_type is None else eval_type
+    eval_type = EvalType.COMIC_SEM_SEG.value if eval_type is None else eval_type
     dataset_dicts = DatasetCatalog.get(dataset_name)
     print(dataset_name, len(dataset_dicts))
     new_cropped_name = f'{dataset_name}_cropped'

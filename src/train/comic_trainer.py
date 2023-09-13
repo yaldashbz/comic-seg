@@ -56,7 +56,7 @@ class ComicTrainer(DefaultTrainer):
     @classmethod
     def build_model(cls, cfg):
         model = super().build_model(cfg)
-        freeze_mask2former(model, distributed=False, mode=cfg.TRAIN.FN_TYPE)
+        freeze_mask2former(model, distributed=False, mode=cfg.FN_TYPE)
         return model
         
 
@@ -73,17 +73,16 @@ class ComicTrainer(DefaultTrainer):
             output_folder = cfg.OUTPUT_DIR
         evaluator_list = []
         # we manage to have some evaluators
-        evaluator_types = MetadataCatalog.get(dataset_name).evaluator_type
+        evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
 
-        for evaluator_type in evaluator_types:
-            if evaluator_type == EvalType.COCO.value:
-                evaluator_list.append(COCOEvaluator(dataset_name))
+        if evaluator_type == EvalType.COCO.value:
+            evaluator_list.append(COCOEvaluator(dataset_name))
 
-            if evaluator_type == EvalType.COMIC_INSTANCE.value:
-                evaluator_list.append(ComicInstanceEvaluator(dataset_name))
+        if evaluator_type == EvalType.COMIC_INSTANCE.value:
+            evaluator_list.append(ComicInstanceEvaluator(dataset_name))
 
-            if evaluator_type == EvalType.COMIC_SEM_SEG.value:
-                evaluator_list.append(ComicSemanticEvaluator(dataset_name))
+        if evaluator_type == EvalType.COMIC_SEM_SEG.value:
+            evaluator_list.append(ComicSemanticEvaluator(dataset_name))
 
         if len(evaluator_list) == 1:
             return evaluator_list[0]

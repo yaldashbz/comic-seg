@@ -38,6 +38,9 @@ def base_setup(args):
     cfg.SOLVER.IMS_PER_BATCH = args.batch_size
     cfg.SOLVER.BASE_LR = args.lr
     cfg.SOLVER.OPTIMIZER = 'SGD'
+    
+    # train
+    cfg.FN_MODE = args.fn_mode
     # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
     # cfg.SOLVER.CHECKPOINT_PERIOD = args.chkp_period
     cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
