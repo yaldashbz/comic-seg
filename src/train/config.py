@@ -18,10 +18,10 @@ def base_setup(**kwargs):
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
-    cfg.merge_from_file("Mask2Former/configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml")
+    cfg.merge_from_file("Mask2Former/configs/cityscapes/semantic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_90k.yaml")
     
     # model
-    cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/maskformer/mask2former/coco/instance/maskformer2_swin_large_IN21k_384_bs16_100ep/model_final_e5f453.pkl'
+    cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/maskformer/mask2former/cityscapes/semantic/maskformer2_swin_large_IN21k_384_bs16_90k/model_final_17c1ee.pkl'
     cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON = True
     cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON = True
     cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = False
@@ -40,8 +40,8 @@ def base_setup(**kwargs):
     cfg.SOLVER.OPTIMIZER = 'SGD'
     # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
     cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', cfg.SOLVER.CHECKPOINT_PERIOD)
-    # cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
-    cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
+    cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
+    # cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
     return cfg
 

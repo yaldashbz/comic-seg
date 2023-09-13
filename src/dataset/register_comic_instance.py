@@ -11,7 +11,8 @@ from .utils import *
 DATASET_NAME = 'sinergia_comic_instances'
 PLACID_NAME = 'sinergia_placid_instances'
 YVES_NAME = 'sinergia_yves_instances'
-SINERGIA_ROOT = "/home/yalda/IVRL_backup/shabanza_sinergia/datasets/sinergia"
+# SINERGIA_ROOT = "/home/yalda/IVRL_backup/shabanza_sinergia/datasets/sinergia"
+SINERGIA_ROOT = "/sinergia/shabanza/datasets/sinergia"
 SINERGIA_IMG_DIR = os.path.join(SINERGIA_ROOT, "images", "default")
 SINERGIA_INSTANCES_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotations", "instances_default.json")
 SINERGIA_INSTANCES_MODIFIED_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotations", "instances_default_modified.json")

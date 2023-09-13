@@ -6,8 +6,7 @@ class FNType(enum.Enum):
 
 
 def _fn_decoder(model):
-    # pixel decoder
-    for param in model.sem_seg_head.parameters():
+    for param in model.sem_seg_head.predictor.parameters():
         param.requires_grad = True
 
 
@@ -28,7 +27,7 @@ def freeze_mask2former(
 ):
     if distributed:
         model = model.module
-    for param in model.backbone.parameters():
+    for param in model.parameters():
         param.requires_grad = False
     
     print(f'Finetuning is in mode {mode}')

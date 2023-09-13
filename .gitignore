@@ -13,6 +13,7 @@ __pycache__/
 cityscapesScripts/
 panopticapi/
 wandb/
+Mask2Former/output/
 
 # Unrequired Files
 redundants.ipynb
