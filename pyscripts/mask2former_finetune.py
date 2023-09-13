@@ -80,12 +80,9 @@ def plain_main(args):
 
 def main(args):
     from src.train import setup, ComicTrainer
-    import torch
     
     cfg = setup(args)
-    print("Command Line Args:", args)
-    torch.set_default_device('cuda:1')
-    
+    print("Command Line Args:", args)    
     """
     If you'd like to do anything fancier than the standard training logic,
     consider writing your own training loop (see plain_train_net.py) or

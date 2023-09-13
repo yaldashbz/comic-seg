@@ -40,8 +40,8 @@ def base_setup(**kwargs):
     cfg.SOLVER.OPTIMIZER = 'SGD'
     # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
     cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', cfg.SOLVER.CHECKPOINT_PERIOD)
-    # cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
-    cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
+    cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
+    # cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
     return cfg
 
