@@ -7,7 +7,7 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
 import detectron2.data.transforms as T
-from detectron2.projects.deeplab import build_lr_scheduler
+from detectron2.projects.deeplab.build_solver import build_lr_scheduler
 from detectron2.evaluation import DatasetEvaluators
 from detectron2.solver.build import maybe_add_gradient_clipping
 from detectron2.engine import DefaultTrainer, DefaultPredictor
@@ -17,7 +17,6 @@ from detectron2.data import (
     MetadataCatalog
 )
 from detectron2.data import MetadataCatalog
-from detectron2.solver import build_lr_scheduler
 from detectron2.evaluation.coco_evaluation import COCOEvaluator
 from src.evaluation import ComicInstanceEvaluator, ComicSemanticEvaluator
 from src.dataset.dataset_mapper import ComicDatasetMapper

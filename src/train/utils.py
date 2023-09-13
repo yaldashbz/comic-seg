@@ -1,13 +1,13 @@
 import enum
 
 class FNType(enum.Enum):
-    MATHING_LAYER = 0
-    DECODER = 3
+    MATCHING_LAYER = 'matching_layer'
+    DECODER = 'decoder'
 
 
 def _fn_decoder(model):
     # pixel decoder
-    for param in model.sem_seg_head.parameters():
+    for param in model.sem_seg_head.predictor.parameters():
         param.requires_grad = True
 
 
@@ -17,18 +17,18 @@ def _fn_matching_layer(model):
 
 
 FN_MATCHER = {
-    FNType.MATHING_LAYER.value: _fn_matching_layer,
+    FNType.MATCHING_LAYER.value: _fn_matching_layer,
     FNType.DECODER.value: _fn_decoder
 }
 
 
 def freeze_mask2former(
     model, distributed: bool = False, 
-    mode: FNType = FNType.MATHING_LAYER
+    mode: FNType = FNType.MATCHING_LAYER
 ):
     if distributed:
         model = model.module
-    for param in model.backbone.parameters():
+    for param in model.parameters():
         param.requires_grad = False
     
     print(f'Finetuning is in mode {mode}')
