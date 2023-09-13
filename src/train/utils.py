@@ -24,7 +24,7 @@ FN_MATCHER = {
 
 def freeze_mask2former(
     model, distributed: bool = False, 
-    mode: FNType = FNType.MATCHING_LAYER
+    mode: FNType = FNType.MATCHING_LAYER.value
 ):
     if distributed:
         model = model.module

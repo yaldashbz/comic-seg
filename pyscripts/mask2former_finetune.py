@@ -10,14 +10,15 @@ import detectron2.utils.comm as comm
 def cli():
     parser = default_argument_parser()
     parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--config-file', type=str)
     parser.add_argument('--data-mode', default='placid')
     parser.add_argument('--wandb-name', default='mask2former_fn')
-    parser.add_argument(
-        '--fn-mode', 
-        default=0,
-        type=int,
-        choices=[0, 1, 2, 3]
-    )
+    # parser.add_argument(
+    #     '--fn-mode', 
+    #     default=0,
+    #     type=int,
+    #     choices=[0, 1, 2, 3]
+    # )
     parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--test-size', type=float, default=0.2)
@@ -25,7 +26,7 @@ def cli():
     parser.add_argument('--cropped', action='store_true')
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--steps', type=int, default=1000, nargs='+')
-    parser.add_argument('--chkp-period', type=int, default=200)
+    # parser.add_argument('--chkp-period', type=int, default=200)
     parser.add_argument('--eval-type', choices=[member.value for member in EvalType], nargs='+')
     args = parser.parse_args()
     return args
@@ -74,7 +75,7 @@ def plain_main(args):
             broadcast_buffers=False,
             find_unused_parameters=True
         ) 
-    do_train(cfg, model, mode=args.fn_mode, resume=args.resume, distributed=distributed, wandb_en=args.wandb)
+    do_train(cfg, model, mode=args.TRAIN.FN_MODE, resume=args.resume, distributed=distributed, wandb_en=args.wandb)
     do_test(cfg, model)
 
 

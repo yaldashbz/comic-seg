@@ -13,15 +13,15 @@ from src.dataset import (
 )
 
 
-def base_setup(**kwargs):
-    print(kwargs)
+def base_setup(args):
     cfg = get_cfg()
     add_deeplab_config(cfg)
     add_maskformer2_config(cfg)
-    cfg.merge_from_file("Mask2Former/configs/cityscapes/semantic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_90k.yaml")
-    
+    cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
+
     # model
-    cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/maskformer/mask2former/cityscapes/semantic/maskformer2_swin_large_IN21k_384_bs16_90k/model_final_17c1ee.pkl'
+    # cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/maskformer/mask2former/cityscapes/semantic/maskformer2_swin_large_IN21k_384_bs16_90k/model_final_17c1ee.pkl'
     cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON = True
     cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON = True
     cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON = False
@@ -35,11 +35,11 @@ def base_setup(**kwargs):
     cfg.DATALOADER.NUM_WORKERS = 2
     
     # optimizer
-    cfg.SOLVER.IMS_PER_BATCH = kwargs.get('batch_size', 1)
-    cfg.SOLVER.BASE_LR = kwargs.get('lr', cfg.SOLVER.BASE_LR)
+    cfg.SOLVER.IMS_PER_BATCH = args.batch_size
+    cfg.SOLVER.BASE_LR = args.lr
     cfg.SOLVER.OPTIMIZER = 'SGD'
     # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
-    cfg.SOLVER.CHECKPOINT_PERIOD = kwargs.get('chkp_period', cfg.SOLVER.CHECKPOINT_PERIOD)
+    # cfg.SOLVER.CHECKPOINT_PERIOD = args.chkp_period
     cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
     # cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
@@ -55,7 +55,7 @@ def setup(args):
         args.random_state,
         eval_type=args.eval_type
     )
-    cfg = base_setup(**vars(args))
+    cfg = base_setup(args)
     
     warnings.filterwarnings('ignore')
     if args.cropped:

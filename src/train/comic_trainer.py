@@ -21,6 +21,7 @@ from detectron2.evaluation.coco_evaluation import COCOEvaluator
 from src.evaluation import ComicInstanceEvaluator, ComicSemanticEvaluator
 from src.dataset.dataset_mapper import ComicDatasetMapper
 from src.dataset.helpers import EvalType
+from src.train.utils import freeze_mask2former
 
 from Mask2Former.mask2former.test_time_augmentation import SemanticSegmentorWithTTA
 
@@ -51,6 +52,13 @@ class ComicTrainer(DefaultTrainer):
     """
     Extension of the Trainer class adapted to MaskFormer.
     """
+    
+    @classmethod
+    def build_model(cls, cfg):
+        model = super().build_model(cfg)
+        freeze_mask2former(model, distributed=False, mode=cfg.TRAIN.FN_TYPE)
+        return model
+        
 
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
@@ -86,7 +94,7 @@ class ComicTrainer(DefaultTrainer):
     def build_train_loader(cls, cfg, **kwargs):
         return build_detection_train_loader(
             cfg, mapper=ComicDatasetMapper(cfg=cfg, is_train=True, max_size=500), 
-            **kwargs
+            prefetch_factor=2
         )
     
     @classmethod
