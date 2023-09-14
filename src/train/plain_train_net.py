@@ -40,7 +40,7 @@ def do_test(cfg, model):
     return results
 
 
-def do_train(cfg, model, mode=FNType.MATCHING_LAYER, resume=True, distributed=True, data_loader=None, wandb_en=False):
+def do_train(cfg, model, mode=FNType.MATCHING_LAYER.value, resume=True, distributed=True, data_loader=None, wandb_en=False):
     model.train()
     freeze_mask2former(model, distributed, mode=mode)
     optimizer = ComicTrainer.build_optimizer(cfg, model)

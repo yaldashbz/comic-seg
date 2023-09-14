@@ -56,7 +56,7 @@ class ComicTrainer(DefaultTrainer):
     @classmethod
     def build_model(cls, cfg):
         model = super().build_model(cfg)
-        freeze_mask2former(model, distributed=False, mode=cfg.FN_TYPE)
+        freeze_mask2former(model, distributed=False, mode=cfg.FN_MODE)
         return model
         
 
