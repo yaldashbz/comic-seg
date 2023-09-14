@@ -43,7 +43,6 @@ def base_setup(args):
     cfg.FN_MODE = args.fn_mode
     # cfg.SOLVER.MAX_ITER = kwargs.get('max_iter', 1000)
     # cfg.SOLVER.CHECKPOINT_PERIOD = args.chkp_period
-    cfg.OUTPUT_DIR = '/sinergia/shabanza/outputs/'
     # cfg.OUTPUT_DIR = '/home/yalda/IVRL_backup/shabanza_sinergia/outputs/'
     
     return cfg
