@@ -1,12 +1,12 @@
-import os
 from typing import Any, Dict
-import cv2
 import copy
 import torch
 import numpy as np
 from detectron2.data import transforms as T
 from detectron2.data import detection_utils as utils
 from detectron2.structures.boxes import BoxMode
+from detectron2.structures import BitMasks
+
 
 from src.dataset.helpers import get_panels
 
@@ -25,6 +25,23 @@ TRANSFORM_LISTS = {
     'train': TRAIN_TRANSFORM_LIST,
     'test': TEST_TRANSFORM_LIST
 }
+
+
+def build_sem_seg_train_aug(cfg, augs):
+    if cfg.INPUT.CROP.ENABLED:
+        augs.extend([
+            T.ResizeShortestEdge(
+                short_edge_length=min(cfg.INPUT.CROP.SIZE)
+            ),
+            T.PadTransform(size=cfg.INPUT.CROP.SIZE, pad_value=0)
+            # T.RandomCrop_CategoryAreaConstraint(
+            #     cfg.INPUT.CROP.TYPE,
+            #     cfg.INPUT.CROP.SIZE,
+            #     cfg.INPUT.CROP.SINGLE_CATEGORY_MAX_AREA,
+            #     cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
+            # )
+        ])
+    return augs
 
 
 def panel_mapper(sample):
@@ -61,8 +78,31 @@ def panel_mapper(sample):
     return new_dataset_dicts
 
 
-def comic_mapper(dataset_dict, transform_list):
-    dataset_dict = copy.deepcopy(dataset_dict)
+def convert_instances_to_sem_seg(instances, image_size):
+    segmentation_masks = instances.gt_masks
+    image_height, image_width = image_size
+    bitmasks = BitMasks.from_polygon_masks(segmentation_masks, image_width, image_height)
+    sem_seg = bitmasks.tensor.numpy()
+    print(sem_seg.shape)
+    
+    # ignore panel
+    sem_seg[sem_seg == 24] = float('-inf')
+    
+    if np.any(sem_seg):
+        max_class_id = np.argmax(sem_seg, axis=0)
+
+        # Create a mask of pixels where the maximum value is non-zero
+        max_pixel_mask = np.max(sem_seg, axis=0) > 0
+
+        # Build the semantic segmentation map using np.where
+        seg_map = np.where(max_pixel_mask, max_class_id, 0)
+    else:
+        seg_map = np.zeros(image_size, dtype=np.int32)
+    return torch.from_numpy(seg_map)
+
+
+def comic_mapper(sample, transform_list, classes_to_keep=None, has_sem_seg=False):
+    dataset_dict = copy.deepcopy(sample)
     if 'image' not in dataset_dict:
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
     else:
@@ -73,9 +113,14 @@ def comic_mapper(dataset_dict, transform_list):
         for obj in dataset_dict.pop("annotations")
         if obj.get("iscrowd", 0) == 0
     ]
+    if classes_to_keep:
+        annos = [ann for ann in annos if ann['category_id'] in classes_to_keep]
     dataset_dict["annotations"] = [ann for ann in annos if len(ann['segmentation'])]
     instances = utils.annotations_to_instances(annos, image.shape[:2])
-    dataset_dict["instances"] = utils.filter_empty_instances(instances)
+    instances = utils.filter_empty_instances(instances)
+    if has_sem_seg:
+        dataset_dict["sem_seg"] = convert_instances_to_sem_seg(instances, image.shape[:2])
+    dataset_dict["instances"] = instances
     dataset_dict["image"] = image
     dataset_dict["height"] = image.shape[0]
     dataset_dict["width"] = image.shape[1]
@@ -83,14 +128,24 @@ def comic_mapper(dataset_dict, transform_list):
 
 
 class ComicDatasetMapper:
-    def __init__(self, cfg, is_train=True, max_size=None) -> None:
+    def __init__(self, cfg, is_train=True, max_size=None, classes_to_keep=None) -> None:
         self.cfg = cfg
         mode = 'train' if is_train else 'test'
-        self.transform_list = TRANSFORM_LISTS[mode]
+        transform_list = TRANSFORM_LISTS[mode]
         self.max_size = max_size 
+        self.classes_to_keep = classes_to_keep
+        
+        # took from deeplab build_train_loader code
+        if "SemanticSegmentor" in cfg.MODEL.META_ARCHITECTURE:
+            self.max_size = None # to handle the resizing and padding in deeplab
+            transform_list = build_sem_seg_train_aug(cfg, transform_list)
+        
+        self.transform_list = transform_list
     
     def __call__(self, dataset_dict: Dict) -> Any:
-        dataset_dict = comic_mapper(dataset_dict, self.transform_list)
+        has_sem_seg = "SemanticSegmentor" in self.cfg.MODEL.META_ARCHITECTURE
+        dataset_dict = comic_mapper(
+            dataset_dict, self.transform_list, self.classes_to_keep, has_sem_seg)
         if self.max_size:
             h, w = dataset_dict['height'], dataset_dict['width']
             transform_list = [T.ResizeShortestEdge(min(h, w, self.max_size), self.max_size)]

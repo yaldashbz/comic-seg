@@ -11,7 +11,7 @@ from detectron2.engine import default_writers
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset, print_csv_format
 
-from src.train.comic_trainer import ComicTrainer
+from src.train.mask2former_trainer import Mask2FormerComicTrainer
 from src.train.utils import *
 
 
@@ -26,8 +26,8 @@ logger.addHandler(file_handler)
 def do_test(cfg, model):
     results = OrderedDict()
     for dataset_name in cfg.DATASETS.TEST:
-        data_loader = ComicTrainer.build_test_loader(cfg, dataset_name)
-        evaluator = ComicTrainer.build_evaluator(
+        data_loader = Mask2FormerComicTrainer.build_test_loader(cfg, dataset_name)
+        evaluator = Mask2FormerComicTrainer.build_evaluator(
             cfg, dataset_name, os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
         )
         results_i = inference_on_dataset(model, data_loader, evaluator)
@@ -42,9 +42,9 @@ def do_test(cfg, model):
 
 def do_train(cfg, model, mode=FNType.MATCHING_LAYER.value, resume=True, distributed=True, data_loader=None, wandb_en=False):
     model.train()
-    freeze_mask2former(model, distributed, mode=mode)
-    optimizer = ComicTrainer.build_optimizer(cfg, model)
-    scheduler = ComicTrainer.build_lr_scheduler(cfg, optimizer)
+    freeze_mask2former(model.module, mode=mode)
+    optimizer = Mask2FormerComicTrainer.build_optimizer(cfg, model)
+    scheduler = Mask2FormerComicTrainer.build_lr_scheduler(cfg, optimizer)
 
     checkpointer = DetectionCheckpointer(
         model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
@@ -59,7 +59,7 @@ def do_train(cfg, model, mode=FNType.MATCHING_LAYER.value, resume=True, distribu
     )
 
     writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
-    if not data_loader: data_loader = ComicTrainer.build_train_loader(cfg)
+    if not data_loader: data_loader = Mask2FormerComicTrainer.build_train_loader(cfg)
     logger.info("Starting training from iteration {}".format(start_iter))
     with EventStorage(start_iter) as storage:
         for iteration, data in tqdm(zip(data_loader, range(start_iter, max_iter))):

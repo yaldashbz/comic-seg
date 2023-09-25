@@ -11,6 +11,7 @@ def cli():
     parser = default_argument_parser()
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--data-mode', default='placid')
+    parser.add_argument('--keep-class-ids', choices=list(range(28)), type=int, nargs='+')
     parser.add_argument('--wandb-name', default='mask2former_fn')
     parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0001)
@@ -31,7 +32,8 @@ def init_wandb(args):
             "panel_wise": args.cropped,
             "dataset": args.data_mode,
             "lr": args.lr,
-            "batch_size": args.batch_size
+            "batch_size": args.batch_size,
+            "model": "mask2former"
         },
         name=args.wandb_name
     )
@@ -54,11 +56,11 @@ def log_wandb(trainer, cfg):
 
 
 def plain_main(args):
-    from src.train import setup, ComicTrainer, do_train, do_test
+    from src.train import mask2former_setup, Mask2FormerComicTrainer, do_train, do_test
 
-    cfg = setup(args)
+    cfg = mask2former_setup(args)
     print("Command Line Args:", args)
-    model = ComicTrainer.build_model(cfg) 
+    model = Mask2FormerComicTrainer.build_model(cfg) 
     distributed = comm.get_world_size() > 1
     print('distributed: ', distributed)
     if distributed:
@@ -72,16 +74,16 @@ def plain_main(args):
 
 
 def main(args):
-    from src.train import setup, ComicTrainer
+    from src.train import mask2former_setup, Mask2FormerComicTrainer
     
-    cfg = setup(args)
+    cfg = mask2former_setup(args)
     print("Command Line Args:", args)    
     """
     If you'd like to do anything fancier than the standard training logic,
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
-    trainer = ComicTrainer(cfg)
+    trainer = Mask2FormerComicTrainer(cfg)
     trainer.resume_or_load(resume=False)
     trainer.train()
 

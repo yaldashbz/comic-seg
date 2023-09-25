@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from typing import List, Tuple
+from typing import Tuple
 from sklearn.model_selection import train_test_split
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
@@ -13,11 +13,12 @@ def _register_subset_dataset(dataset, new_name, eval_type, metadata):
     new_metadata.evaluator_type = eval_type
     new_metadata.thing_dataset_id_to_contiguous_id = metadata.thing_dataset_id_to_contiguous_id
     new_metadata.thing_classes = metadata.thing_classes
+    new_metadata.stuff_classes = metadata.stuff_classes
 
 
 def register_train_test(
-    dataset_name, 
-    test_size=0.2, random_state=42, 
+    dataset_name,
+    test_size=0.2, random_state=42,
     eval_type: Tuple[str] = None
 ) -> Tuple[str, str]:
     print('registering train test dataset ...')
@@ -58,7 +59,7 @@ def register_panels(dataset_name: str, mode: str, eval_type: Tuple[str] = None):
     cropped_dataset_dicts = []
     print(f"Collect all panels for mode {mode} ...")
 
-    for dataset_dict in tqdm(dataset_dicts):
+    for dataset_dict in tqdm(dataset_dicts[:2]):
         cropped_dataset_dicts.extend(panel_mapper(dataset_dict))
     
     _register_subset_dataset(
