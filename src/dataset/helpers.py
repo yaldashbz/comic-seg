@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.structures.boxes import BoxMode
+from detectron2.data import DatasetCatalog
 import pycocotools.mask as mask_utils
 
 from .utils import *
@@ -15,9 +16,8 @@ from .utils import *
 
 class EvalType(Enum):
     COMIC_INSTANCE = 'comic_instance'
-    COMIC_INSTANCE_PANEL = 'comic_instance_panel'
     COMIC_SEM_SEG = 'comic_sem_seg'
-    COMIC_SEM_SEG_PANEL = 'comic_sem_seg_panel'
+    COCO = 'coco'
 
 
 def visualize_sample_anns(sample, category_id=None):
@@ -50,7 +50,7 @@ def visualize_dataset_dict(sample, metadata):
     plt.imshow(r)
 
 
-def show_seg_predictions(im, outputs, metadata):
+def show_seg_predictions(im, outputs, metadata, axis=1):
     """
     Show panoptic/instance/semantic predictions
     """
@@ -62,7 +62,7 @@ def show_seg_predictions(im, outputs, metadata):
     v = Visualizer(im[:, :, ::-1], metadata, scale=1.2, instance_mode=ColorMode.IMAGE_BW)
     semantic_result = v.draw_sem_seg(outputs["sem_seg"].argmax(0).to("cpu")).get_image()
     print("Panoptic segmentation (top), instance segmentation (middle), semantic segmentation (bottom)")
-    res = np.concatenate((panoptic_result, instance_result, semantic_result), axis=0)[:, :, ::-1]
+    res = np.concatenate((panoptic_result, instance_result, semantic_result), axis=axis)[:, :, ::-1]
     plt.figure(figsize=(40, 30))
     plt.imshow(res)
     plt.axis('off')
@@ -84,6 +84,7 @@ def get_panels(sample):
     panels = []
     cropped_boxes = []
     pil_im = Image.open(sample['file_name'])
+
     for ann in sample['annotations']:
         if ann['category_id'] == 24: # panel
             bbox_mode = ann['bbox_mode']
@@ -220,3 +221,10 @@ def compute_pixel_mean_std(dataset_dicts):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pixel_values.extend(image.reshape(-1, 3))
     return np.mean(pixel_values, axis=0), np.std(pixel_values, axis=0)
+
+
+def get_min_max_sizes(dataset_name):
+    dataset_dicts = DatasetCatalog.get(dataset_name)
+    min_size = min([min(data["height"], data["width"]) for data in dataset_dicts])
+    max_size = max([max(data["height"], data["width"]) for data in dataset_dicts])
+    return min_size, max_size

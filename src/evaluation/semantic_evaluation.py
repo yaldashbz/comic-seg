@@ -34,7 +34,7 @@ class ComicSemanticEvaluator(DatasetEvaluator):
     ):
         cropped_box = kwargs.get("cropped_box", None)
 
-        for annotation in tqdm(annotations):
+        for annotation in annotations:
             category_id = annotation["category_id"]
             gt_mask = annotation["segmentation"]
             try:
@@ -69,7 +69,8 @@ class ComicSemanticEvaluator(DatasetEvaluator):
         ious = self._compute_iou()
         mean_iou = np.mean(ious)
 
-        return {
+        return dict(segm={
             "mean_iou": mean_iou,
-            "iou_per_class": dict(enumerate(ious))
-        }
+            **{self.metadata.thing_classes[class_id]: iou 
+               for class_id, iou in dict(enumerate(ious)).items()}
+        })

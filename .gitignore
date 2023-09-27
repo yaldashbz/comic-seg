@@ -12,8 +12,10 @@ __pycache__/
 # Unrequired Folders
 cityscapesScripts/
 panopticapi/
+wandb/
 
 # Unrequired Files
 redundants.ipynb
 mask2former_eval_pascalvoc.ipynb
 mask2former_eval_comic_codes.ipynb
+log*

@@ -18,7 +18,7 @@ SINERGIA_INSTANCES_MODIFIED_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotati
 PLACID_INSTANCES_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotations", "instances_placid.json")
 YVES_INSTANCES_FILE = os.path.join(SINERGIA_ROOT, "coco", "annotations", "instances_yves.json")
 LABEL_COLOR_FILE = os.path.join(SINERGIA_ROOT, 'label_colors.txt')
-COMIC_STUFF_CATEGORIES = ['Horizon', 'Background', 'Comic Bubble'] # TODO for later (ask)
+COMIC_STUFF_CATEGORIES = [] # TODO for later (ask) 'Horizon', 'Background'
 
 NAME_MAPPER = {
     'placid': PLACID_NAME,
@@ -77,9 +77,11 @@ def _get_comic_meta(categories):
     # Mapping from the incontiguous ADE category id to an id in [0, 27]
     thing_dataset_id_to_contiguous_id = {k: i for i, k in enumerate(thing_ids)}
     thing_classes = [k["name"] for k in categories]
+    stuff_classes = COMIC_STUFF_CATEGORIES
     ret = {
         "thing_dataset_id_to_contiguous_id": thing_dataset_id_to_contiguous_id,
         "thing_classes": thing_classes,
+        "stuff_classes": stuff_classes
     }
     return ret
 
@@ -176,6 +178,8 @@ if YVES_NAME not in MetadataCatalog.list():
     register_yves_instances()
 
 
+# remember these are just mappers, 
+# don't use these directly for mapping in detectron datasets
 COMIC_CATEGORIES = open_json(SINERGIA_INSTANCES_MODIFIED_FILE)['categories']
 COMIC_CATEGORY2CLASS_ID = {k['name']: k['id'] for k in COMIC_CATEGORIES}
 COMIC_CLASS_ID2CATEGORY = {v: k for k, v in COMIC_CATEGORY2CLASS_ID.items()}

@@ -1,9 +1,13 @@
+from detectron2.data import MetadataCatalog
+
+from src.dataset import DATASET_NAME, COMIC_CLASS_ID2CATEGORY
+
 sinergia_specific_classes = [
     'Building', 'Background', 'Face', 'Hand', 'Horizon', 'Panel',
     'Comic Bubble', 'Text', 'Plant'
 ]
 
-comic2coco = {
+comic2coco_names = {
     'Character': ['person'],
     'Car': ['car', 'truck'],
     'Motorbike': ['motorcycle'],
@@ -36,10 +40,27 @@ comic2coco = {
 }
 
 for comic in sinergia_specific_classes:
-    comic2coco.update({comic: []})
+    comic2coco_names.update({comic: []})
+
 
 COCO2COMIC = {}
-for k, v in comic2coco.items():
+for k, v in comic2coco_names.items():
     if isinstance(v, list):
         for item in v:
             COCO2COMIC[item] = k
+
+
+COMIC_METADATA = MetadataCatalog.get(DATASET_NAME)
+COMIC_CID2DID = {v: k for k, v in COMIC_METADATA.thing_dataset_id_to_contiguous_id.items()}
+COCO_METADATA = MetadataCatalog.get("coco_2017_train")
+
+
+def comic2coco(comic_cid):
+    """
+    cid is the id which is in detectron dataset
+    (contiguous id)
+    """
+    dataset_id = COMIC_CID2DID[comic_cid]
+    comic_label = COMIC_CLASS_ID2CATEGORY[dataset_id]
+    coco_label = comic2coco_names[comic_label][0]
+    return COCO_METADATA.thing_classes.index(coco_label)
