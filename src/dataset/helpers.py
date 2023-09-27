@@ -50,6 +50,18 @@ def visualize_dataset_dict(sample, metadata):
     plt.imshow(r)
 
 
+def get_instance_pred(im, outputs, metadata):
+    v = Visualizer(im[:, :, ::-1], metadata, scale=1.2, instance_mode=ColorMode.IMAGE_BW)
+    instance_result = v.draw_instance_predictions(outputs["instances"].to("cpu")).get_image()
+    return instance_result
+
+
+def get_semantic_pred(im, outputs, metadata):
+    v = Visualizer(im[:, :, ::-1], metadata, scale=1.2, instance_mode=ColorMode.IMAGE_BW)
+    semantic_result = v.draw_sem_seg(outputs["sem_seg"].argmax(0).to("cpu")).get_image()
+    return semantic_result
+    
+
 def show_seg_predictions(im, outputs, metadata, axis=1):
     """
     Show panoptic/instance/semantic predictions
@@ -127,79 +139,7 @@ def get_all_panels_dataset_dicts(dataset_dicts, save=False):
 
             new_dataset_dicts.append(new_sample)
 
-    return new_dataset_dicts    
-
-
-def decode_rle_segmentation(rle_segmentation, cropped_box):
-    cropped_mask = mask_utils.decode(rle_segmentation)
-    cropped_box = list(map(int, cropped_box))
-    cropped_mask = cropped_mask[
-        cropped_box[1]:cropped_box[1] + cropped_box[3], 
-        cropped_box[0]:cropped_box[0] + cropped_box[2]
-    ]
-    cropped_rle_segmentation = mask_utils.encode(np.asfortranarray(cropped_mask.astype(np.uint8)))
-
-    return cropped_rle_segmentation
-
-
-def crop_annotations(annotations, cropped_box):
-    # Don't use for now.
-    cropped_annotations = []
-    cropped_x_min, cropped_y_min, cropped_x_max, cropped_y_max = cropped_box
-
-    for annotation in annotations:
-        bbox = annotation['bbox']
-        if annotation['bbox_mode'] == BoxMode.XYWH_ABS:
-            bbox = [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
-        segmentation = annotation['segmentation']
-
-        # Calculate the intersection between the bbox and cropped_box
-        x_min = max(bbox[0], cropped_x_min)
-        y_min = max(bbox[1], cropped_y_min)
-        x_max = min(bbox[2], cropped_x_max)
-        y_max = min(bbox[3], cropped_y_max)
-
-        # Check if there is an intersection
-        if x_min < x_max and y_min < y_max:
-            # Calculate the new cropped bbox coordinates
-            cropped_bbox = [
-                x_min - cropped_x_min,
-                y_min - cropped_y_min,
-                x_max - x_min,
-                y_max - y_min
-            ]
-
-            # Calculate the new cropped segmentation coordinates
-            cropped_segmentation = []
-            if isinstance(segmentation, dict) and 'size' in segmentation and 'counts' in segmentation:
-                cropped_rle_segmentation = decode_rle_segmentation(segmentation, cropped_bbox)
-                if cropped_rle_segmentation is not None:
-                    cropped_segmentation.append(cropped_rle_segmentation)
-            else:
-                for segment in segmentation:
-                    cropped_segment = [
-                        [point[0] - cropped_x_min, point[1] - cropped_y_min]
-                        for point in zip(segment[::2], segment[1::2])
-                        if (
-                            cropped_x_min <= point[0] <= cropped_x_max + 100
-                            and cropped_y_min <= point[1] <= cropped_y_max + 100
-                        )
-                    ]
-                    if cropped_segment:
-                        cropped_segmentation.append(cropped_segment)
-
-            # Create a new annotation with the cropped bbox and segmentation
-            cropped_annotation = {
-                'iscrowd': annotation['iscrowd'],
-                'bbox': cropped_bbox,
-                'category_id': annotation['category_id'],
-                'segmentation': cropped_segmentation,
-                'bbox_mode': BoxMode.XYWH_ABS
-            }
-
-            cropped_annotations.append(cropped_annotation)
-
-    return cropped_annotations
+    return new_dataset_dicts
 
 
 def mask_to_contours(mask):
