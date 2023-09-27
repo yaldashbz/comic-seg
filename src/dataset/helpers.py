@@ -210,16 +210,7 @@ def mask_to_contours(mask):
 
 def convert_rle_mask_to_coords(rle_mask):
     binary_mask = mask_utils.decode(rle_mask)
-def mask_to_contours(mask):
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours_list = [contour.flatten().tolist() for contour in contours]
-    return contours_list
-
-
-def convert_rle_mask_to_coords(rle_mask):
-    binary_mask = mask_utils.decode(rle_mask)
     # Convert the binary mask to a list of [x, y] coordinates
-    return mask_to_contours(binary_mask)
     return mask_to_contours(binary_mask)
 
 
