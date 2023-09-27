@@ -11,7 +11,7 @@ State-of-the-art segmentation investigation (Train, Evaluate) on an old comic da
 Just fix the addresses, then put your bash script in 'scripts' folder.
 
 ```
-sh scripts/test.sh
+sh scripts/mask2former_predict.sh
 ```
 
 ## Dataset Conversion
