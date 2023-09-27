@@ -14,7 +14,7 @@ Just fix the addresses, then put your bash script in 'scripts' folder.
 sh scripts/test.sh
 ```
 
-## Dataset Conversion:
+## Dataset Conversion
 - If comic dataset is in cityscapes format, use convert_comic_to_coco_format.ipynb notebook, and then update the path of json_file in [src.dataset.register_comic_instances.py](https://github.com/yaldashbz/comic-seg/blob/coco/convert_comic_to_coco_format.ipynb)
 - If comic dataset is in coco format, all the src functions will be ok.
 
