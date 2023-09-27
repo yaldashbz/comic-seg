@@ -1,7 +1,8 @@
-from typing import Any, Dict
 import copy
 import torch
+import operator
 import numpy as np
+from typing import Any, Dict
 from detectron2.data import transforms as T
 from detectron2.data import detection_utils as utils
 from detectron2.structures.boxes import BoxMode
@@ -17,6 +18,10 @@ TRAIN_TRANSFORM_LIST = [
     T.RandomFlip(prob=0.5, horizontal=True, vertical=False)
 ]
 
+TRAIN_TRANSFORM_LIST_DEEPLAB = [
+    T.NoOpTransform()
+]
+
 TEST_TRANSFORM_LIST = [
     T.NoOpTransform()
 ]
@@ -27,20 +32,18 @@ TRANSFORM_LISTS = {
 }
 
 
-def build_sem_seg_train_aug(cfg, augs):
+def build_deeplab_pad_aug(cfg, org_height, org_width):
+    augs = [T.NoOpTransform()]
     if cfg.INPUT.CROP.ENABLED:
-        augs.extend([
-            T.ResizeShortestEdge(
-                short_edge_length=min(cfg.INPUT.CROP.SIZE)
-            ),
-            T.PadTransform(size=cfg.INPUT.CROP.SIZE, pad_value=0)
-            # T.RandomCrop_CategoryAreaConstraint(
-            #     cfg.INPUT.CROP.TYPE,
-            #     cfg.INPUT.CROP.SIZE,
-            #     cfg.INPUT.CROP.SINGLE_CATEGORY_MAX_AREA,
-            #     cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-            # )
-        ])
+        new_w, new_h = list(map(int, cfg.INPUT.CROP.SIZE))
+        # y, x = tuple(map(operator.sub, (new_h, new_w), (org_height, org_width)))
+        # x0 = max(x // 2, 0)
+        # y0 = max(y // 2, 0)
+        # x1, y1 = x0, y0
+        # if x%2: x1 += 1
+        # if y%2: y1 += 1
+        # augs = [T.PadTransform(x0, y0, x1, y1)]
+        augs = [T.Resize((new_w, new_h))]
     return augs
 
 
@@ -78,30 +81,28 @@ def panel_mapper(sample):
     return new_dataset_dicts
 
 
-def convert_instances_to_sem_seg(instances, image_size):
-    segmentation_masks = instances.gt_masks
-    image_height, image_width = image_size
-    bitmasks = BitMasks.from_polygon_masks(segmentation_masks, image_width, image_height)
-    sem_seg = bitmasks.tensor.numpy()
-    print(sem_seg.shape)
-    
-    # ignore panel
-    sem_seg[sem_seg == 24] = float('-inf')
-    
-    if np.any(sem_seg):
-        max_class_id = np.argmax(sem_seg, axis=0)
+def convert_instances_to_sem_seg(instances, image_height, image_width):
+    try:
+        segmentation_masks = instances.gt_masks
+        bitmasks = BitMasks.from_polygon_masks(segmentation_masks, image_height, image_width)
+        sem_seg = bitmasks.tensor.numpy()
+        # ignore panel
+        sem_seg[sem_seg == 24] = float('-inf')
+        
+        if np.any(sem_seg):
+            max_class_id = np.argmax(sem_seg, axis=0)
 
-        # Create a mask of pixels where the maximum value is non-zero
-        max_pixel_mask = np.max(sem_seg, axis=0) > 0
+            # Create a mask of pixels where the maximum value is non-zero
+            max_pixel_mask = np.max(sem_seg, axis=0) > 0
 
-        # Build the semantic segmentation map using np.where
-        seg_map = np.where(max_pixel_mask, max_class_id, 0)
-    else:
-        seg_map = np.zeros(image_size, dtype=np.int32)
-    return torch.from_numpy(seg_map)
+            # Build the semantic segmentation map using np.where
+            seg_map = np.where(max_pixel_mask, max_class_id, 0)
+    except AttributeError:
+        seg_map = np.zeros((image_width, image_height), dtype=np.int32)
+    return torch.from_numpy(seg_map).to(torch.long)
 
 
-def comic_mapper(sample, transform_list, classes_to_keep=None, has_sem_seg=False):
+def comic_mapper(sample, transform_list, classes_to_keep=None, build_sem_seg=False):
     dataset_dict = copy.deepcopy(sample)
     if 'image' not in dataset_dict:
         image = utils.read_image(dataset_dict["file_name"], format="RGB")
@@ -118,8 +119,8 @@ def comic_mapper(sample, transform_list, classes_to_keep=None, has_sem_seg=False
     dataset_dict["annotations"] = [ann for ann in annos if len(ann['segmentation'])]
     instances = utils.annotations_to_instances(annos, image.shape[:2])
     instances = utils.filter_empty_instances(instances)
-    if has_sem_seg:
-        dataset_dict["sem_seg"] = convert_instances_to_sem_seg(instances, image.shape[:2])
+    if build_sem_seg:
+        dataset_dict["sem_seg"] = convert_instances_to_sem_seg(instances, image.shape[0], image.shape[1])
     dataset_dict["instances"] = instances
     dataset_dict["image"] = image
     dataset_dict["height"] = image.shape[0]
@@ -131,25 +132,49 @@ class ComicDatasetMapper:
     def __init__(self, cfg, is_train=True, max_size=None, classes_to_keep=None) -> None:
         self.cfg = cfg
         mode = 'train' if is_train else 'test'
-        transform_list = TRANSFORM_LISTS[mode]
+        self.transform_list = TRANSFORM_LISTS[mode]        
         self.max_size = max_size 
         self.classes_to_keep = classes_to_keep
-        
-        # took from deeplab build_train_loader code
-        if "SemanticSegmentor" in cfg.MODEL.META_ARCHITECTURE:
-            self.max_size = None # to handle the resizing and padding in deeplab
-            transform_list = build_sem_seg_train_aug(cfg, transform_list)
-        
-        self.transform_list = transform_list
     
     def __call__(self, dataset_dict: Dict) -> Any:
         has_sem_seg = "SemanticSegmentor" in self.cfg.MODEL.META_ARCHITECTURE
-        dataset_dict = comic_mapper(
-            dataset_dict, self.transform_list, self.classes_to_keep, has_sem_seg)
-        if self.max_size:
-            h, w = dataset_dict['height'], dataset_dict['width']
-            transform_list = [T.ResizeShortestEdge(min(h, w, self.max_size), self.max_size)]
-            dataset_dict = comic_mapper(dataset_dict, transform_list)
+        dataset_dict = self.pre_augment(dataset_dict, has_sem_seg)
+        
+        # do not want to have these augmentations in deeplab
+        if not has_sem_seg:
+            dataset_dict = self.augment(dataset_dict)
+        
+        dataset_dict = self.post_augment(dataset_dict, has_sem_seg)  
         image = dataset_dict['image']
         dataset_dict['image'] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
         return dataset_dict
+
+    def pre_augment(self, dataset_dict: Dict, has_sem_seg: bool):
+        if has_sem_seg:
+            # pre_augmentation
+            # to handle the resizing and padding in deeplab
+            transform_list = [T.ResizeShortestEdge(
+                short_edge_length=min(self.cfg.INPUT.CROP.SIZE), 
+                max_size=max(self.cfg.INPUT.CROP.SIZE))
+                if self.cfg.INPUT.CROP.ENABLED
+                else T.NoOpTransform()
+            ]
+            return comic_mapper(
+                dataset_dict, transform_list, self.classes_to_keep)
+        return dataset_dict
+    
+    def augment(self, dataset_dict: Dict):
+        return comic_mapper(
+            dataset_dict, self.transform_list, self.classes_to_keep)
+    
+    def post_augment(self, dataset_dict: Dict, has_sem_seg: bool):
+        if self.max_size and not has_sem_seg:
+            # post augmentation
+            h, w = dataset_dict['height'], dataset_dict['width']
+            transform_list = [T.ResizeShortestEdge(min(h, w, self.max_size), self.max_size)]
+            
+        if has_sem_seg:
+            # post augmentation deeplab (resized image should be padded)
+            transform_list = build_deeplab_pad_aug(self.cfg, dataset_dict['height'], dataset_dict['width'])
+
+        return comic_mapper(dataset_dict, transform_list, build_sem_seg=True)

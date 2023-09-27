@@ -66,16 +66,12 @@ def main(args):
     """
     trainer = DeepLabComicTrainer(cfg)
     
-    model = trainer.model.module
-    print('model: ', inspect.getsource(model.__class__))
-    print('model.backbone: ', inspect.getfile(model.backbone.__class__), inspect.getsource(model.backbone.__class__))
-
     trainer.resume_or_load(resume=False)
     trainer.train()
 
-    # if args.wandb:
-    #     log_wandb(trainer, cfg)
-    #     wandb.finish()
+    if args.wandb:
+        log_wandb(trainer, cfg)
+        wandb.finish()
 
 
 if __name__ == '__main__':

@@ -59,7 +59,7 @@ def register_panels(dataset_name: str, mode: str, eval_type: Tuple[str] = None):
     cropped_dataset_dicts = []
     print(f"Collect all panels for mode {mode} ...")
 
-    for dataset_dict in tqdm(dataset_dicts[:2]):
+    for dataset_dict in tqdm(dataset_dicts):
         cropped_dataset_dicts.extend(panel_mapper(dataset_dict))
     
     _register_subset_dataset(
