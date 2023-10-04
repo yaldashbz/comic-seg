@@ -37,7 +37,7 @@ Mean IoU on Placid comic:
 Important Class | Character | Text | Comic Bubble
 --- | --- | --- | ---
 Pre-trained |  0.8980 | 0.9096 | 0.6771
-Pre-trained (w.o. sem_seg_head.class_embed) | 0.5235 | 0.2613 | 0.3351
+Pre-trained (w/o sem_seg_head.class_embed) | 0.5235 | 0.2613 | 0.3351
 Fine-tuned class-embed | 0.5803 | 0.5124 | 0.3844
 Fine-tuned query-embeds | 0.5775 | 0.5083 | 0.3882
 Fine-tuned decoder | 0.5711 | 0.3739 | 0.2643
@@ -47,7 +47,7 @@ Fine-tuned decoder | 0.5711 | 0.3739 | 0.2643
 Important Class | Character | Text | Comic Bubble
 --- | --- | --- | ---
 Pre-trained | 0.5576 | 0.5080 | 0.4104 
-Pre-trained (w.o. sem_seg_head.predictor) | 0.3423 | 0.2677 | 0.1915
+Pre-trained (w/o sem_seg_head.predictor) | 0.3423 | 0.2677 | 0.1915
 Fine-tuned predictor | x | x | x
 Fine-tuned decoder | x | x | x
 Fine-tuned model | x | x | x
