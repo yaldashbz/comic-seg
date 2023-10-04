@@ -5,6 +5,8 @@ class FNType(enum.Enum):
     DECODER = 'decoder'
     QUERY_FEAT = 'queryfeat'
     PREDICTOR = 'predictor'
+    SEM_SEG = 'sem_seg'
+    WHOLE = 'whole'
 
 
 def _fn_decoder(model):
@@ -29,6 +31,16 @@ def _fn_predictor(model):
         param.requires_grad = True
 
 
+def _fn_sem_seg(model):
+    for param in model.sem_seg_head.parameters():
+        param.requires_grad = True
+
+
+def _fn_model(model):
+    for param in model.parameters():
+        param.requires_grad = True
+
+
 FN_MATCHER_MASK2FORMER = {
     FNType.MATCHING_LAYER.value: _fn_matching_layer,
     FNType.DECODER.value: _fn_decoder,
@@ -37,7 +49,9 @@ FN_MATCHER_MASK2FORMER = {
 
 
 FN_MATCHER_DEEPLAB = {
-    FNType.PREDICTOR.value: _fn_predictor
+    FNType.PREDICTOR.value: _fn_predictor,
+    FNType.SEM_SEG.value: _fn_sem_seg,
+    FNType.WHOLE.value: _fn_model
 }
 
 

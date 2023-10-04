@@ -65,7 +65,6 @@ def main(args):
     subclassing the trainer.
     """
     trainer = DeepLabComicTrainer(cfg)
-    
     trainer.resume_or_load(resume=False)
     trainer.train()
 

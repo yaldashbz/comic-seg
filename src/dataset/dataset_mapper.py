@@ -145,7 +145,7 @@ class ComicDatasetMapper:
         if not has_sem_seg:
             dataset_dict = self.augment(dataset_dict)
         
-        if self.mode == 'train':
+        if self.mode == 'train' or has_sem_seg:
             dataset_dict = self.post_augment(dataset_dict, has_sem_seg)  
         
         image = dataset_dict['image']

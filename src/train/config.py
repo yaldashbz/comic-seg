@@ -92,6 +92,8 @@ def deeplab_setup(args):
     cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = 28
     cfg.MODEL.PIXEL_MEAN = [184.70014834, 158.68679797, 118.3750071]
     cfg.MODEL.PIXEL_STD = [45.54069698, 40.70228227, 40.9410987]
+    cfg.MODEL.RESNETS.NORM = 'BN'
+    cfg.MODEL.SEM_SEG_HEAD.NORM = 'BN'
     # optimizer
     cfg.SOLVER.IMS_PER_BATCH = args.batch_size
     cfg.SOLVER.BASE_LR = args.lr
