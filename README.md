@@ -47,6 +47,7 @@ Fine-tuned decoder | 0.5711 | 0.3739 | 0.2643
 Important Class | Character | Text | Comic Bubble
 --- | --- | --- | ---
 Pre-trained | x | x | x 
+Pre-trained (w.o. class embed) | 0.3423 | 0.2677 | 0.1915
 Fine-tuned class-embed | x | x | x
 Fine-tuned decoder | x | x | x
 Fine-tuned model | x | x | x
