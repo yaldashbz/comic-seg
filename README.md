@@ -48,6 +48,6 @@ Important Class | Character | Text | Comic Bubble
 --- | --- | --- | ---
 Pre-trained | 0.5576 | 0.5080 | 0.4104 
 Pre-trained (w/o sem_seg_head.predictor) | 0.3423 | 0.2677 | 0.1915
-Fine-tuned predictor | x | x | x
+Fine-tuned predictor | 0.1097 | 0.0929 | 0.0735
 Fine-tuned decoder | 0.1654 | 0.1423 | 0.1120
 Fine-tuned model | 0.0908 | 0.0721 | 0.0584
