@@ -23,20 +23,6 @@ from src.train.utils import freeze_deeplab
 
 
 
-def build_sem_seg_train_aug(cfg):
-    augs = []
-    if cfg.INPUT.CROP.ENABLED:
-        augs.append(
-            T.RandomCrop_CategoryAreaConstraint(
-                cfg.INPUT.CROP.TYPE,
-                cfg.INPUT.CROP.SIZE,
-                cfg.INPUT.CROP.SINGLE_CATEGORY_MAX_AREA,
-                cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-            )
-        )
-    return augs
-
-
 class DeepLabComicTrainer(DefaultTrainer):
     """
     We use the "DefaultTrainer" which contains a number pre-defined logic for

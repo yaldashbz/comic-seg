@@ -1,6 +1,6 @@
 python pyscripts/deeplab_finetune.py \
     --config-file 'detectron2/projects/DeepLab/configs/Cityscapes-SemanticSegmentation/deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml' \
-    --num-gpus 2 --dist-url 'auto' \
+    --num-gpus 1 --dist-url 'auto' \
     --num-machines 1 --data-mode placid --keep-class-ids 25 26 27 \
     --cropped \
     --batch-size 32 --lr 0.0001 \

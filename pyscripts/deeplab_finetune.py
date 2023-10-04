@@ -86,7 +86,7 @@ if __name__ == '__main__':
     print("Command Line Args:", args)
     if args.wandb:
         init_wandb(args)
-
+    
     launch(
         main,
         args.num_gpus,

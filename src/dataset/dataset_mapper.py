@@ -131,37 +131,38 @@ def comic_mapper(sample, transform_list, classes_to_keep=None, build_sem_seg=Fal
 class ComicDatasetMapper:
     def __init__(self, cfg, is_train=True, max_size=None, classes_to_keep=None) -> None:
         self.cfg = cfg
-        mode = 'train' if is_train else 'test'
-        self.transform_list = TRANSFORM_LISTS[mode]        
+        self.mode = 'train' if is_train else 'test'
+        self.transform_list = TRANSFORM_LISTS[self.mode]        
         self.max_size = max_size 
         self.classes_to_keep = classes_to_keep
     
     def __call__(self, dataset_dict: Dict) -> Any:
         has_sem_seg = "SemanticSegmentor" in self.cfg.MODEL.META_ARCHITECTURE
-        dataset_dict = self.pre_augment(dataset_dict, has_sem_seg)
+        if has_sem_seg:
+            dataset_dict = self.pre_augment(dataset_dict)
         
         # do not want to have these augmentations in deeplab
         if not has_sem_seg:
             dataset_dict = self.augment(dataset_dict)
         
-        dataset_dict = self.post_augment(dataset_dict, has_sem_seg)  
+        if self.mode == 'train':
+            dataset_dict = self.post_augment(dataset_dict, has_sem_seg)  
+        
         image = dataset_dict['image']
         dataset_dict['image'] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
         return dataset_dict
 
-    def pre_augment(self, dataset_dict: Dict, has_sem_seg: bool):
-        if has_sem_seg:
-            # pre_augmentation
-            # to handle the resizing and padding in deeplab
-            transform_list = [T.ResizeShortestEdge(
-                short_edge_length=min(self.cfg.INPUT.CROP.SIZE), 
-                max_size=max(self.cfg.INPUT.CROP.SIZE))
-                if self.cfg.INPUT.CROP.ENABLED
-                else T.NoOpTransform()
-            ]
-            return comic_mapper(
-                dataset_dict, transform_list, self.classes_to_keep)
-        return dataset_dict
+    def pre_augment(self, dataset_dict: Dict):
+        # pre_augmentation
+        # to handle the resizing and padding in deeplab
+        transform_list = [T.ResizeShortestEdge(
+            short_edge_length=min(self.cfg.INPUT.CROP.SIZE), 
+            max_size=max(self.cfg.INPUT.CROP.SIZE))
+            if self.cfg.INPUT.CROP.ENABLED
+            else T.NoOpTransform()
+        ]
+        return comic_mapper(
+            dataset_dict, transform_list, self.classes_to_keep)
     
     def augment(self, dataset_dict: Dict):
         return comic_mapper(

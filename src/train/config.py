@@ -88,8 +88,8 @@ def deeplab_setup(args):
     add_deeplab_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 8
-    cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = 8
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 28
+    cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = 28
     cfg.MODEL.PIXEL_MEAN = [184.70014834, 158.68679797, 118.3750071]
     cfg.MODEL.PIXEL_STD = [45.54069698, 40.70228227, 40.9410987]
     # optimizer
